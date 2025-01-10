@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Touren-Auswertung mit dezenter Namenshervorhebung")
+    st.title("Touren-Auswertung mit farblich abgesetzten Namenszeilen")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "touren_auswertung_namen_dezent.xlsx"
+            output_file = "touren_auswertung_namen_alle_grau.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -91,7 +91,7 @@ def main():
                             # Gruppieren nach Fahrer und detaillierte Darstellung
                             sheet_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                # Fahrername leicht abgesetzt
+                                # Fahrername als farblich abgesetzte Zeile
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 # Kopfzeile hinzufügen
                                 sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
@@ -136,13 +136,13 @@ def main():
 
                         # Farben und Grid
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            if row_idx == 1:  # Fahrername
+                            if row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
                                 for cell in row:
                                     cell.fill = name_fill
                                     cell.font = Font(bold=True)
                                     cell.alignment = Alignment(horizontal="center")
                                     cell.border = thin_border
-                            elif row_idx == 2:  # Kopfzeile
+                            elif "Datum" in str(row[0].value):  # Kopfzeile
                                 for cell in row:
                                     cell.fill = header_fill
                                     cell.font = Font(bold=True)
@@ -156,7 +156,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="touren_auswertung_namen_dezent.xlsx",
+                        file_name="touren_auswertung_namen_alle_grau.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
