@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Touren-Auswertung: Klare Trennung mit Farben pro Fahrer")
+    st.title("Professionelle Touren-Auswertung für Business-Zwecke")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,14 +71,11 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_je_fahrer_farben_einzeln.xlsx"
+            output_file = "business_touren_auswertung.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
-
-                    # Farben für Fahrer
-                    colors = ["B7CCE2", "D9EAD3", "FFF2CC", "EAD1DC", "F4CCCC"]  # Blau, Grün, Gelb, Rosa, Rot
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
@@ -93,12 +90,11 @@ def main():
 
                             # Gruppieren nach Fahrer und detaillierte Darstellung
                             sheet_data = []
-                            for color_index, ((nachname, vorname), group) in enumerate(month_data.groupby(["Nachname", "Vorname"])):
-                                color = colors[color_index % len(colors)]
-
+                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 # Fahrername hervorheben
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                # Datenzeilen
+                                # Kopfzeile
+                                sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
                                         row["Datum"].strftime("%d.%m.%Y"),
@@ -121,6 +117,13 @@ def main():
 
                     # Automatische Spaltenbreite und Farbliche Anpassung
                     workbook = writer.book
+                    light_gray = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                    header_gray = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+                    thin_border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin')
+                    )
+
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
 
@@ -130,33 +133,27 @@ def main():
                             col_letter = get_column_letter(col[0].column)
                             sheet.column_dimensions[col_letter].width = max_length + 2
 
-                        # Farben für Fahrersektionen
+                        # Farben für Fahrerabschnitte
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
                             if row[0].value and row[0].value.split(" ")[0].isalpha():  # Fahrername
                                 for cell in row:
-                                    cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-                                    cell.font = Font(size=14, bold=True, color="FFFFFF")
+                                    cell.fill = header_gray
+                                    cell.font = Font(size=14, bold=True)
                                     cell.alignment = Alignment(horizontal="center")
                             elif row[0].value and "Gesamtverdienst" in str(row[0].value):  # Gesamtverdienst
                                 for cell in row:
-                                    cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
                                     cell.font = Font(bold=True)
                                     cell.alignment = Alignment(horizontal="center")
-                            elif row[0].value:  # Datenzeilen
+                            elif row_idx % 2 == 0:  # Datenzeilen
                                 for cell in row:
-                                    cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-                                    cell.border = Border(
-                                        left=Side(style='thin'),
-                                        right=Side(style='thin'),
-                                        top=Side(style='thin'),
-                                        bottom=Side(style='thin')
-                                    )
+                                    cell.fill = light_gray
+                                    cell.border = thin_border
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_je_fahrer_farben_einzeln.xlsx",
+                        file_name="business_touren_auswertung.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
