@@ -3,7 +3,7 @@ import streamlit as st
 import calendar
 
 def main():
-    st.title("Monatliche Touren-Auswertung")
+    st.title("Monatliche Touren-Auswertung nach Fahrern")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -56,8 +56,9 @@ def main():
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
 
-                # Monatsspalte hinzufügen
+                # Monat und Jahr hinzufügen
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
+                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
 
                 # Daten zur Gesamtliste hinzufügen
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
@@ -70,13 +71,25 @@ def main():
             output_file = "auswertung_nach_monaten.xlsx"
             try:
                 with pd.ExcelWriter(output_file) as writer:
-                    for month in range(1, 13):
-                        month_data = all_data[all_data["Monat"] == month]
-                        if not month_data.empty:
-                            # Monat in deutschem Format
-                            month_name = calendar.month_name[month]
-                            month_data["Datum"] = month_data["Datum"].dt.strftime("%d.%m.%Y")  # Format für Export
-                            month_data.to_excel(writer, index=False, sheet_name=month_name[:31])  # Monatsblatt
+                    for year in sorted(all_data["Jahr"].unique(), reverse=True):
+                        for month in sorted(all_data["Monat"].unique()):
+                            month_data = all_data[(all_data["Monat"] == month) & (all_data["Jahr"] == year)]
+                            if not month_data.empty:
+                                # Blattname als "Monat Jahr"
+                                month_name = f"{calendar.month_name[month]} {year}"
+                                
+                                # Gruppieren nach Fahrer
+                                grouped_data = month_data.groupby(["Nachname", "Vorname"]).agg(
+                                    {"Verdienst": "sum"}
+                                ).reset_index()
+
+                                # Verdienste darstellen
+                                grouped_data = grouped_data.rename(
+                                    columns={"Verdienst": "Gesamtverdienst (€)"}
+                                )
+
+                                # Daten exportieren
+                                grouped_data.to_excel(writer, index=False, sheet_name=month_name[:31])
 
                 with open(output_file, "rb") as file:
                     st.download_button(
