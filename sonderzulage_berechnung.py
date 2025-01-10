@@ -1,9 +1,10 @@
+
 import pandas as pd
 import streamlit as st
 import calendar
 
 def main():
-    st.title("Monatliche Touren-Auswertung nach Fahrern")
+    st.title("Detaillierte Touren-Auswertung nach Fahrern")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -68,25 +69,26 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_nach_monaten.xlsx"
+            output_file = "auswertung_nach_monaten_detailliert.xlsx"
             try:
                 with pd.ExcelWriter(output_file) as writer:
                     for year in sorted(all_data["Jahr"].unique(), reverse=True):
                         for month in sorted(all_data["Monat"].unique()):
                             month_data = all_data[(all_data["Monat"] == month) & (all_data["Jahr"] == year)]
                             if not month_data.empty:
-                                # Blattname als "Monat Jahr"
-                                month_name = f"{calendar.month_name[month]} {year}"
-                                
-                                # Gruppieren nach Fahrer
-                                grouped_data = month_data.groupby(["Nachname", "Vorname"]).agg(
-                                    {"Verdienst": "sum"}
-                                ).reset_index()
+                                # Blattname als "Monat Jahr" in deutscher Sprache
+                                month_name = f"{calendar.month_name[month]} {year}".capitalize()
 
-                                # Verdienste darstellen
-                                grouped_data = grouped_data.rename(
-                                    columns={"Verdienst": "Gesamtverdienst (€)"}
-                                )
+                                # Gruppieren nach Fahrer mit detaillierter Aufschlüsselung
+                                grouped_data = month_data.groupby(["Nachname", "Vorname"]).apply(
+                                    lambda x: x[["Datum", "Tour", "LKW1", "LKW2", "LKW3", "Verdienst"]]
+                                ).reset_index(drop=True)
+
+                                # Sortieren der Daten nach Datum
+                                grouped_data = grouped_data.sort_values(by="Datum")
+                                
+                                # Datum ins deutsche Format bringen
+                                grouped_data["Datum"] = grouped_data["Datum"].dt.strftime("%d.%m.%Y")
 
                                 # Daten exportieren
                                 grouped_data.to_excel(writer, index=False, sheet_name=month_name[:31])
@@ -95,7 +97,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_nach_monaten.xlsx",
+                        file_name="auswertung_nach_monaten_detailliert.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
