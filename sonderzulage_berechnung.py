@@ -43,7 +43,9 @@ def main():
             except:
                 return None
         
-        extracted_data["Datum"] = extracted_data["Datum"].apply(lambda x: clean_date(x) if x.strip() else None)
+        extracted_data["Datum"] = extracted_data["Datum"].apply(
+            lambda x: clean_date(x) if isinstance(x, str) and x.strip() else None
+        )
         extracted_data["Datum"] = extracted_data["Datum"].fillna("Datum unbekannt")
         
         # Berechnung der Wertigkeiten
