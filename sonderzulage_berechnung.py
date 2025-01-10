@@ -1,9 +1,12 @@
 import pandas as pd
 import streamlit as st
 import calendar
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Detaillierte Touren-Auswertung nach Fahrern")
+    st.title("Detaillierte Touren-Auswertung nach Fahrern mit Farben und Auto-Größe")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -70,7 +73,7 @@ def main():
         if not all_data.empty:
             output_file = "auswertung_nach_fahrern_detailliert.xlsx"
             try:
-                with pd.ExcelWriter(output_file) as writer:
+                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     for year in sorted(all_data["Jahr"].unique(), reverse=True):
                         for month in sorted(all_data["Monat"].unique()):
                             month_data = all_data[(all_data["Monat"] == month) & (all_data["Jahr"] == year)]
@@ -100,6 +103,30 @@ def main():
 
                                 # Daten exportieren
                                 sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
+
+                    # Automatische Spaltenbreite und Farbliche Anpassung
+                    workbook = writer.book
+                    for sheet_name in workbook.sheetnames:
+                        sheet = workbook[sheet_name]
+
+                        # Setze Auto-Spaltenbreite
+                        for col in sheet.columns:
+                            max_length = max(len(str(cell.value)) for cell in col if cell.value)
+                            col_letter = get_column_letter(col[0].column)
+                            sheet.column_dimensions[col_letter].width = max_length + 2
+
+                        # Kopfzeilenfarbe
+                        for cell in sheet[1]:
+                            cell.fill = PatternFill(start_color="FFFFCC", end_color="FFFFCC", fill_type="solid")
+                            cell.font = Font(bold=True)
+                            cell.alignment = Alignment(horizontal="center")
+
+                        # Fahrerüberschriften hervorheben
+                        for row in sheet.iter_rows():
+                            if row[0].value and "Gesamtverdienst" in str(row[0].value):
+                                for cell in row:
+                                    cell.fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid")
+                                    cell.font = Font(bold=True)
 
                 with open(output_file, "rb") as file:
                     st.download_button(
