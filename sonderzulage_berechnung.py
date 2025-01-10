@@ -1,4 +1,3 @@
-
 import pandas as pd
 import streamlit as st
 import calendar
@@ -69,7 +68,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_nach_monaten_detailliert.xlsx"
+            output_file = "auswertung_nach_fahrern_detailliert.xlsx"
             try:
                 with pd.ExcelWriter(output_file) as writer:
                     for year in sorted(all_data["Jahr"].unique(), reverse=True):
@@ -79,25 +78,34 @@ def main():
                                 # Blattname als "Monat Jahr" in deutscher Sprache
                                 month_name = f"{calendar.month_name[month]} {year}".capitalize()
 
-                                # Gruppieren nach Fahrer mit detaillierter Aufschlüsselung
-                                grouped_data = month_data.groupby(["Nachname", "Vorname"]).apply(
-                                    lambda x: x[["Datum", "Tour", "LKW1", "LKW2", "LKW3", "Verdienst"]]
-                                ).reset_index(drop=True)
+                                # Gruppieren nach Fahrer und detaillierte Darstellung
+                                sheet_data = []
+                                for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                                    sheet_data.append([f"{vorname} {nachname}"])  # Fahrerüberschrift
+                                    for _, row in group.iterrows():
+                                        sheet_data.append([
+                                            row["Datum"].strftime("%d.%m.%Y"),
+                                            row["Tour"],
+                                            row["LKW2"],
+                                            row["LKW3"],
+                                            row["Verdienst"]
+                                        ])
+                                    # Gesamtverdienst hinzufügen
+                                    total_earnings = group["Verdienst"].sum()
+                                    sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                                    sheet_data.append([])  # Leere Zeile als Trennung
 
-                                # Sortieren der Daten nach Datum
-                                grouped_data = grouped_data.sort_values(by="Datum")
-                                
-                                # Datum ins deutsche Format bringen
-                                grouped_data["Datum"] = grouped_data["Datum"].dt.strftime("%d.%m.%Y")
+                                # Erstellen eines DataFrames für das aktuelle Blatt
+                                sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
 
                                 # Daten exportieren
-                                grouped_data.to_excel(writer, index=False, sheet_name=month_name[:31])
+                                sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_nach_monaten_detailliert.xlsx",
+                        file_name="auswertung_nach_fahrern_detailliert.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
