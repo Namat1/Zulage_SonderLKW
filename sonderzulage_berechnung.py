@@ -1,14 +1,15 @@
 import pandas as pd
 import streamlit as st
+import calendar
 
 def main():
-    st.title("Touren-Auswertung für mehrere Dateien")
+    st.title("Monatliche Touren-Auswertung")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
     if uploaded_files:
-        all_results = []  # Liste zur Speicherung der Ergebnisse für jede Datei
+        all_data = pd.DataFrame()  # DataFrame zur Speicherung aller Daten
 
         for uploaded_file in uploaded_files:
             try:
@@ -38,7 +39,6 @@ def main():
                 # Datumsspalte in deutschem Format (dd.mm.yyyy) formatieren
                 try:
                     extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-                    extracted_data["Datum"] = extracted_data["Datum"].dt.strftime("%d.%m.%Y")
                 except Exception as e:
                     st.error(f"Fehler bei der Umwandlung der Datumsspalte in Datei {uploaded_file.name}: {e}")
                     continue
@@ -56,40 +56,33 @@ def main():
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
 
-                # Gruppierung nach Monat
-                try:
-                    extracted_data["Monat"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y").dt.to_period("M")
-                    summary = extracted_data.groupby(["Monat", "Nachname", "Vorname"]).agg(
-                        {"Verdienst": "sum"}
-                    ).reset_index()
-                    summary["Monat"] = summary["Monat"].astype(str)  # Monat in lesbarem Format
-                except Exception as e:
-                    st.error(f"Fehler bei der Berechnung der Zusammenfassung in Datei {uploaded_file.name}: {e}")
-                    continue
+                # Monatsspalte hinzufügen
+                extracted_data["Monat"] = extracted_data["Datum"].dt.month
 
-                # Speichere die Ergebnisse für späteren Export
-                all_results.append({
-                    "file": uploaded_file.name,
-                    "data": summary
-                })
+                # Daten zur Gesamtliste hinzufügen
+                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-        # Export der Ergebnisse in eine Excel-Datei
-        if all_results:
-            output_file = "auswertung_touren.xlsx"
+        # Export der Ergebnisse nach Monaten
+        if not all_data.empty:
+            output_file = "auswertung_nach_monaten.xlsx"
             try:
                 with pd.ExcelWriter(output_file) as writer:
-                    for result in all_results:
-                        sheet_name = result["file"][:31]  # Begrenzung des Blattnamens auf 31 Zeichen
-                        result["data"].to_excel(writer, index=False, sheet_name=sheet_name)
+                    for month in range(1, 13):
+                        month_data = all_data[all_data["Monat"] == month]
+                        if not month_data.empty:
+                            # Monat in deutschem Format
+                            month_name = calendar.month_name[month]
+                            month_data["Datum"] = month_data["Datum"].dt.strftime("%d.%m.%Y")  # Format für Export
+                            month_data.to_excel(writer, index=False, sheet_name=month_name[:31])  # Monatsblatt
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_touren.xlsx",
+                        file_name="auswertung_nach_monaten.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
