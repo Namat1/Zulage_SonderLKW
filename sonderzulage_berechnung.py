@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Detaillierte Touren-Auswertung nach Fahrern mit deutschen Blattnamen")
+    st.title("Detaillierte Touren-Auswertung nach Fahrern (sortiert nach ältestem Datum)")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,44 +71,45 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_nach_fahrern_detailliert.xlsx"
+            output_file = "auswertung_nach_fahrern_sortiert.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    for year in sorted(all_data["Jahr"].unique(), reverse=True):
-                        for month in sorted(all_data["Monat"].unique()):
-                            month_data = all_data[(all_data["Monat"] == month) & (all_data["Jahr"] == year)]
-                            if not month_data.empty:
-                                # Blattname als "Monat Jahr" in deutscher Sprache
-                                month_name = f"{calendar.month_name[month]} {year}".capitalize()
-                                month_name_german = {
-                                    "January": "Januar", "February": "Februar", "March": "März", "April": "April",
-                                    "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
-                                    "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
-                                }
-                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
+                    # Sortiere nach Jahr und Monat aufsteigend
+                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
 
-                                # Gruppieren nach Fahrer und detaillierte Darstellung
-                                sheet_data = []
-                                for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                    sheet_data.append([f"{vorname} {nachname}"])  # Fahrerüberschrift
-                                    for _, row in group.iterrows():
-                                        sheet_data.append([
-                                            row["Datum"].strftime("%d.%m.%Y"),
-                                            row["Tour"],
-                                            row["LKW2"],
-                                            row["LKW3"],
-                                            row["Verdienst"]
-                                        ])
-                                    # Gesamtverdienst hinzufügen
-                                    total_earnings = group["Verdienst"].sum()
-                                    sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                    sheet_data.append([])  # Leere Zeile als Trennung
+                    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
+                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
+                        if not month_data.empty:
+                            # Blattname als "Monat Jahr" in deutscher Sprache
+                            month_name_german = {
+                                "January": "Januar", "February": "Februar", "March": "März", "April": "April",
+                                "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
+                                "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
+                            }
+                            month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
 
-                                # Erstellen eines DataFrames für das aktuelle Blatt
-                                sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
+                            # Gruppieren nach Fahrer und detaillierte Darstellung
+                            sheet_data = []
+                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                                sheet_data.append([f"{vorname} {nachname}"])  # Fahrerüberschrift
+                                for _, row in group.iterrows():
+                                    sheet_data.append([
+                                        row["Datum"].strftime("%d.%m.%Y"),
+                                        row["Tour"],
+                                        row["LKW2"],
+                                        row["LKW3"],
+                                        row["Verdienst"]
+                                    ])
+                                # Gesamtverdienst hinzufügen
+                                total_earnings = group["Verdienst"].sum()
+                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                                sheet_data.append([])  # Leere Zeile als Trennung
 
-                                # Daten exportieren
-                                sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
+                            # Erstellen eines DataFrames für das aktuelle Blatt
+                            sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
+
+                            # Daten exportieren
+                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
 
                     # Automatische Spaltenbreite und Farbliche Anpassung
                     workbook = writer.book
@@ -138,7 +139,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_nach_fahrern_detailliert.xlsx",
+                        file_name="auswertung_nach_fahrern_sortiert.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
