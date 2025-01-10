@@ -11,7 +11,6 @@ def main():
         try:
             # Einlesen der Excel-Tabelle
             df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-            
             st.write("Daten erfolgreich geladen. Vorschau:")
             st.dataframe(df.head())
         except Exception as e:
@@ -28,18 +27,28 @@ def main():
             st.error(f"Fehler beim Filtern der Daten: {e}")
             return
         
-        # Relevante Spalten extrahieren
-        columns_to_extract = [0, 3, 4, 10, 11, 12, 13, 14]  # Spalten: 1, 4, 5, 11, 12, 13, 14, 15
+        # Relevante Spalten extrahieren (ohne Spalte 13)
+        columns_to_extract = [0, 3, 4, 10, 11, 12, 14]  # Spalten: 1, 4, 5, 11, 12, 14, 15
         try:
             extracted_data = filtered_df.iloc[:, columns_to_extract]
-            extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW2", "LKW3", "LKW4", "Datum"]
+            extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW2", "LKW3", "Datum"]
         except Exception as e:
             st.error(f"Fehler beim Extrahieren der Spalten: {e}")
             return
         
+        # Datumsspalte bereinigen
+        def clean_date(value):
+            try:
+                return pd.to_datetime(value, errors="coerce")
+            except:
+                return None
+        
+        extracted_data["Datum"] = extracted_data["Datum"].apply(lambda x: clean_date(x) if x.strip() else None)
+        extracted_data["Datum"] = extracted_data["Datum"].fillna("Datum unbekannt")
+        
         # Berechnung der Wertigkeiten
         def calculate_earnings(row):
-            lkw_values = [row["LKW1"], row["LKW2"], row["LKW3"], row["LKW4"]]
+            lkw_values = [row["LKW1"], row["LKW2"], row["LKW3"]]
             earnings = 0
             for value in lkw_values:
                 if value in [602, 156]:
@@ -50,12 +59,17 @@ def main():
         
         extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
         
-        # Gruppierung nach Fahrer und Monat
+        # Gruppierung nach Fahrer und ggf. Monat (nur wenn Datum bekannt)
         try:
-            extracted_data["Monat"] = pd.to_datetime(extracted_data["Datum"]).dt.to_period("M")
-            summary = extracted_data.groupby(["Nachname", "Vorname", "Monat"]).agg(
-                {"Verdienst": "sum"}
-            ).reset_index()
+            if "Datum unbekannt" not in extracted_data["Datum"].values:
+                extracted_data["Monat"] = pd.to_datetime(extracted_data["Datum"]).dt.to_period("M")
+                summary = extracted_data.groupby(["Nachname", "Vorname", "Monat"]).agg(
+                    {"Verdienst": "sum"}
+                ).reset_index()
+            else:
+                summary = extracted_data.groupby(["Nachname", "Vorname"]).agg(
+                    {"Verdienst": "sum"}
+                ).reset_index()
         except Exception as e:
             st.error(f"Fehler bei der Berechnung der Zusammenfassung: {e}")
             return
