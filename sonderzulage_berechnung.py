@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Individuell gefärbte Touren-Auswertung pro Fahrer")
+    st.title("Touren-Auswertung: Klare Trennung mit Farben pro Fahrer")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,14 +71,14 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_je_fahrer_farben.xlsx"
+            output_file = "auswertung_je_fahrer_farben_einzeln.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
 
-                    # Farben pro Fahrer abwechselnd
-                    colors = ["B7CCE2", "D9EAD3", "FFF2CC", "EAD1DC", "F4CCCC"]
+                    # Farben für Fahrer
+                    colors = ["B7CCE2", "D9EAD3", "FFF2CC", "EAD1DC", "F4CCCC"]  # Blau, Grün, Gelb, Rosa, Rot
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
@@ -110,7 +110,8 @@ def main():
                                 # Gesamtverdienst hinzufügen
                                 total_earnings = group["Verdienst"].sum()
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])  # Leere Zeile als Trennung
+                                # Weiße Leerzeile
+                                sheet_data.append([])
 
                             # Erstellen eines DataFrames für das aktuelle Blatt
                             sheet_df = pd.DataFrame(sheet_data)
@@ -131,20 +132,31 @@ def main():
 
                         # Farben für Fahrersektionen
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            if row[0].value and "Gesamtverdienst" in str(row[0].value):
-                                # Gesamtverdienst hervorheben
+                            if row[0].value and row[0].value.split(" ")[0].isalpha():  # Fahrername
                                 for cell in row:
+                                    cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+                                    cell.font = Font(size=14, bold=True, color="FFFFFF")
+                                    cell.alignment = Alignment(horizontal="center")
+                            elif row[0].value and "Gesamtverdienst" in str(row[0].value):  # Gesamtverdienst
+                                for cell in row:
+                                    cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
                                     cell.font = Font(bold=True)
                                     cell.alignment = Alignment(horizontal="center")
-                            elif row_idx % 2 == 0:
+                            elif row[0].value:  # Datenzeilen
                                 for cell in row:
-                                    cell.fill = PatternFill(start_color=colors[row_idx % len(colors)], end_color=colors[row_idx % len(colors)], fill_type="solid")
+                                    cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+                                    cell.border = Border(
+                                        left=Side(style='thin'),
+                                        right=Side(style='thin'),
+                                        top=Side(style='thin'),
+                                        bottom=Side(style='thin')
+                                    )
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_je_fahrer_farben.xlsx",
+                        file_name="auswertung_je_fahrer_farben_einzeln.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
