@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Klar strukturierte Touren-Auswertung")
+    st.title("Klar strukturierte Touren-Auswertung mit besserer Trennung")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "strukturierte_touren_auswertung.xlsx"
+            output_file = "touren_auswertung_besser_strukturiert.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -165,7 +165,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="strukturierte_touren_auswertung.xlsx",
+                        file_name="touren_auswertung_besser_strukturiert.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
