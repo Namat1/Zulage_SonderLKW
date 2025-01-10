@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Touren-Auswertung mit farblich abgesetzten Namenszeilen")
+    st.title("Professionelle Touren-Auswertung mit blauen Namenszeilen")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "touren_auswertung_namen_alle_grau.xlsx"
+            output_file = "touren_auswertung_namen_blau.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -91,7 +91,7 @@ def main():
                             # Gruppieren nach Fahrer und detaillierte Darstellung
                             sheet_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                # Fahrername als farblich abgesetzte Zeile
+                                # Fahrername als blaue Zeile
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 # Kopfzeile hinzufügen
                                 sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
@@ -122,7 +122,7 @@ def main():
                         left=Side(style='thin'), right=Side(style='thin'),
                         top=Side(style='thin'), bottom=Side(style='thin')
                     )
-                    name_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                    name_fill = PatternFill(start_color="B7CCE2", end_color="B7CCE2", fill_type="solid")
                     header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
 
                     for sheet_name in workbook.sheetnames:
@@ -156,7 +156,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="touren_auswertung_namen_alle_grau.xlsx",
+                        file_name="touren_auswertung_namen_blau.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
