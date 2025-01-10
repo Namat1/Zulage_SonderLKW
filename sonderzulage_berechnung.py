@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Professionelle Touren-Auswertung mit klaren Unterscheidungen")
+    st.title("Touren-Auswertung mit detailliertem Grid-Layout")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,13 +71,13 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "touren_auswertung_deutlich.xlsx"
+            output_file = "touren_auswertung_grid.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
 
-                    # Farben für Fahrersektionen
+                    # Farben für Fahrerabschnitte
                     section_colors = ["D9EAD3", "FCE5CD", "D0E0E3", "F4CCCC", "FFF2CC"]  # Grün, Orange, Blau, Rot, Gelb
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
@@ -123,6 +123,11 @@ def main():
 
                     # Automatische Spaltenbreite und Farbliche Anpassung
                     workbook = writer.book
+                    thin_border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin')
+                    )
+
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
 
@@ -132,22 +137,26 @@ def main():
                             col_letter = get_column_letter(col[0].column)
                             sheet.column_dimensions[col_letter].width = max_length + 2
 
-                        # Anpassung der Farben für Abschnitte
+                        # Anpassung der Farben und Grid für alle Zellen
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            if row[0].value and "Datum" in str(row[0].value):  # Kopfzeile
+                            for cell in row:
+                                cell.border = thin_border  # Grid für jede Zelle
+
+                            if row_idx == 1:  # Fahrername
+                                for cell in row:
+                                    cell.fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
+                                    cell.font = Font(size=14, bold=True)
+                                    cell.alignment = Alignment(horizontal="center")
+                            elif "Datum" in str(row[0].value):  # Kopfzeile
                                 for cell in row:
                                     cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
                                     cell.font = Font(bold=True)
-                            elif row[0].value and "Gesamtverdienst" in str(row[0].value):  # Gesamtverdienst
-                                for cell in row:
-                                    cell.font = Font(bold=True)
-                                    cell.alignment = Alignment(horizontal="center")
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="touren_auswertung_deutlich.xlsx",
+                        file_name="touren_auswertung_grid.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
