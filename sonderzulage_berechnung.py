@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Touren-Auswertung mit grauer Namenszeile und Grid-Layout")
+    st.title("Professionelle Touren-Auswertung mit klarer Struktur")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "touren_auswertung_namen_grau.xlsx"
+            output_file = "professionelle_touren_auswertung.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -91,7 +91,7 @@ def main():
                             # Gruppieren nach Fahrer und detaillierte Darstellung
                             sheet_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                # Fahrername als graue Zeile
+                                # Fahrername als Überschrift
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 # Kopfzeile hinzufügen
                                 sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
@@ -122,6 +122,8 @@ def main():
                         left=Side(style='thin'), right=Side(style='thin'),
                         top=Side(style='thin'), bottom=Side(style='thin')
                     )
+                    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                    title_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
 
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
@@ -134,19 +136,19 @@ def main():
 
                         # Farben und Grid
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            if row[0].value and row[0].value.split(" ")[0].isalpha():  # Fahrername
+                            if row_idx == 1:  # Fahrername
                                 for cell in row:
-                                    cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+                                    cell.fill = title_fill
                                     cell.font = Font(size=14, bold=True)
                                     cell.alignment = Alignment(horizontal="center")
                                     cell.border = thin_border
-                            elif "Datum" in str(row[0].value):  # Kopfzeile
+                            elif row_idx == 2:  # Kopfzeile
                                 for cell in row:
-                                    cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+                                    cell.fill = header_fill
                                     cell.font = Font(bold=True)
                                     cell.alignment = Alignment(horizontal="center")
                                     cell.border = thin_border
-                            else:  # Datenzeilen und Gesamtverdienst
+                            else:  # Datenzeilen
                                 for cell in row:
                                     cell.border = thin_border
 
@@ -154,7 +156,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="touren_auswertung_namen_grau.xlsx",
+                        file_name="professionelle_touren_auswertung.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
