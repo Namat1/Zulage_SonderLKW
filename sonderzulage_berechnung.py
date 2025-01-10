@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Touren-Auswertung mit detailliertem Grid-Layout")
+    st.title("Touren-Auswertung mit grauer Namenszeile und Grid-Layout")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,14 +71,11 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "touren_auswertung_grid.xlsx"
+            output_file = "touren_auswertung_namen_grau.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
-
-                    # Farben für Fahrerabschnitte
-                    section_colors = ["D9EAD3", "FCE5CD", "D0E0E3", "F4CCCC", "FFF2CC"]  # Grün, Orange, Blau, Rot, Gelb
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
@@ -93,10 +90,8 @@ def main():
 
                             # Gruppieren nach Fahrer und detaillierte Darstellung
                             sheet_data = []
-                            for section_index, ((nachname, vorname), group) in enumerate(month_data.groupby(["Nachname", "Vorname"])):
-                                section_color = section_colors[section_index % len(section_colors)]
-
-                                # Fahrername hervorheben
+                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                                # Fahrername als graue Zeile
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 # Kopfzeile hinzufügen
                                 sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
@@ -137,26 +132,29 @@ def main():
                             col_letter = get_column_letter(col[0].column)
                             sheet.column_dimensions[col_letter].width = max_length + 2
 
-                        # Anpassung der Farben und Grid für alle Zellen
+                        # Farben und Grid
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            for cell in row:
-                                cell.border = thin_border  # Grid für jede Zelle
-
-                            if row_idx == 1:  # Fahrername
+                            if row[0].value and row[0].value.split(" ")[0].isalpha():  # Fahrername
                                 for cell in row:
-                                    cell.fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
+                                    cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
                                     cell.font = Font(size=14, bold=True)
                                     cell.alignment = Alignment(horizontal="center")
+                                    cell.border = thin_border
                             elif "Datum" in str(row[0].value):  # Kopfzeile
                                 for cell in row:
                                     cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
                                     cell.font = Font(bold=True)
+                                    cell.alignment = Alignment(horizontal="center")
+                                    cell.border = thin_border
+                            else:  # Datenzeilen und Gesamtverdienst
+                                for cell in row:
+                                    cell.border = thin_border
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="touren_auswertung_grid.xlsx",
+                        file_name="touren_auswertung_namen_grau.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
