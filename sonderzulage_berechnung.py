@@ -2,11 +2,11 @@ import pandas as pd
 import streamlit as st
 import calendar
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Detaillierte Touren-Auswertung nach Fahrern (sortiert nach ältestem Datum)")
+    st.title("Detaillierte Touren-Auswertung nach Fahrern mit verbesserter Visualisierung")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_nach_fahrern_sortiert.xlsx"
+            output_file = "auswertung_nach_fahrern_visualisiert.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -92,6 +92,7 @@ def main():
                             sheet_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 sheet_data.append([f"{vorname} {nachname}"])  # Fahrerüberschrift
+                                sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])  # Kopfzeile
                                 for _, row in group.iterrows():
                                     sheet_data.append([
                                         row["Datum"].strftime("%d.%m.%Y"),
@@ -106,7 +107,7 @@ def main():
                                 sheet_data.append([])  # Leere Zeile als Trennung
 
                             # Erstellen eines DataFrames für das aktuelle Blatt
-                            sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
+                            sheet_df = pd.DataFrame(sheet_data)
 
                             # Daten exportieren
                             sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
@@ -122,24 +123,35 @@ def main():
                             col_letter = get_column_letter(col[0].column)
                             sheet.column_dimensions[col_letter].width = max_length + 2
 
-                        # Kopfzeilenfarbe
-                        for cell in sheet[1]:
-                            cell.fill = PatternFill(start_color="FFFFCC", end_color="FFFFCC", fill_type="solid")
-                            cell.font = Font(bold=True)
-                            cell.alignment = Alignment(horizontal="center")
-
                         # Fahrerüberschriften hervorheben
                         for row in sheet.iter_rows():
-                            if row[0].value and "Gesamtverdienst" in str(row[0].value):
-                                for cell in row:
-                                    cell.fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid")
-                                    cell.font = Font(bold=True)
+                            if row[0].value and "Gesamtverdienst" not in str(row[0].value):
+                                if row[0].value and "Datum" in str(row[0].value):
+                                    # Kopfzeile hervorheben
+                                    for cell in row:
+                                        cell.fill = PatternFill(start_color="FFFFCC", end_color="FFFFCC", fill_type="solid")
+                                        cell.font = Font(bold=True)
+                                elif row[0].value:
+                                    # Fahrerüberschrift hervorheben
+                                    for cell in row:
+                                        cell.fill = PatternFill(start_color="CCFF99", end_color="CCFF99", fill_type="solid")
+                                        cell.font = Font(bold=True)
+                                        cell.alignment = Alignment(horizontal="center")
+
+                        # Umrahmung für alle Zellen
+                        thin_border = Border(
+                            left=Side(style='thin'), right=Side(style='thin'),
+                            top=Side(style='thin'), bottom=Side(style='thin')
+                        )
+                        for row in sheet.iter_rows():
+                            for cell in row:
+                                cell.border = thin_border
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_nach_fahrern_sortiert.xlsx",
+                        file_name="auswertung_nach_fahrern_visualisiert.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
