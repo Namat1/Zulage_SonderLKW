@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Professionelle Touren-Auswertung mit klarem Layout")
+    st.title("Klar strukturierte Touren-Auswertung")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "professionelle_touren_auswertung.xlsx"
+            output_file = "strukturierte_touren_auswertung.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -134,11 +134,11 @@ def main():
 
                         # Farben und Umrandung
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            if row_idx == 1:
+                            if row[0].value and row_idx == 1:
                                 # Fahrername fett und zentriert
                                 for cell in row:
                                     cell.fill = dark_gray
-                                    cell.font = Font(size=14, bold=True, color="FFFFFF")
+                                    cell.font = Font(size=16, bold=True, color="FFFFFF")
                                     cell.alignment = Alignment(horizontal="center", vertical="center")
                                     cell.border = thin_border
                             elif row[0].value and "Datum" in str(row[0].value):
@@ -165,7 +165,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="professionelle_touren_auswertung.xlsx",
+                        file_name="strukturierte_touren_auswertung.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
