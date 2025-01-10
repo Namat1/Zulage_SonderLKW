@@ -36,17 +36,12 @@ def main():
             st.error(f"Fehler beim Extrahieren der Spalten: {e}")
             return
         
-        # Datumsspalte bereinigen
-        def clean_date(value):
-            try:
-                return pd.to_datetime(value, errors="coerce")
-            except:
-                return None
-        
-        extracted_data["Datum"] = extracted_data["Datum"].apply(
-            lambda x: clean_date(x) if isinstance(x, str) and x.strip() else None
-        )
-        extracted_data["Datum"] = extracted_data["Datum"].fillna("Datum unbekannt")
+        # Datumsspalte in ein Datumsformat umwandeln
+        try:
+            extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+        except Exception as e:
+            st.error(f"Fehler bei der Umwandlung der Datumsspalte: {e}")
+            return
         
         # Berechnung der Wertigkeiten
         def calculate_earnings(row):
@@ -61,17 +56,12 @@ def main():
         
         extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
         
-        # Gruppierung nach Fahrer und ggf. Monat (nur wenn Datum bekannt)
+        # Gruppierung nach Fahrer und Monat
         try:
-            if "Datum unbekannt" not in extracted_data["Datum"].values:
-                extracted_data["Monat"] = pd.to_datetime(extracted_data["Datum"]).dt.to_period("M")
-                summary = extracted_data.groupby(["Nachname", "Vorname", "Monat"]).agg(
-                    {"Verdienst": "sum"}
-                ).reset_index()
-            else:
-                summary = extracted_data.groupby(["Nachname", "Vorname"]).agg(
-                    {"Verdienst": "sum"}
-                ).reset_index()
+            extracted_data["Monat"] = extracted_data["Datum"].dt.to_period("M")
+            summary = extracted_data.groupby(["Nachname", "Vorname", "Monat"]).agg(
+                {"Verdienst": "sum"}
+            ).reset_index()
         except Exception as e:
             st.error(f"Fehler bei der Berechnung der Zusammenfassung: {e}")
             return
