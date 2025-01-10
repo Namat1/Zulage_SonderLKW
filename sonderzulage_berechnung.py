@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Detaillierte Touren-Auswertung nach Fahrern mit Farben und Auto-Größe")
+    st.title("Detaillierte Touren-Auswertung nach Fahrern mit deutschen Blattnamen")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -80,6 +80,12 @@ def main():
                             if not month_data.empty:
                                 # Blattname als "Monat Jahr" in deutscher Sprache
                                 month_name = f"{calendar.month_name[month]} {year}".capitalize()
+                                month_name_german = {
+                                    "January": "Januar", "February": "Februar", "March": "März", "April": "April",
+                                    "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
+                                    "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
+                                }
+                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
 
                                 # Gruppieren nach Fahrer und detaillierte Darstellung
                                 sheet_data = []
