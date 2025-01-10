@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Detaillierte Touren-Auswertung nach Fahrern mit verbesserter Visualisierung")
+    st.title("Detaillierte Touren-Auswertung mit dezenter Farbgestaltung")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_nach_fahrern_visualisiert.xlsx"
+            output_file = "auswertung_nach_fahrern_grau.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -114,6 +114,9 @@ def main():
 
                     # Automatische Spaltenbreite und Farbliche Anpassung
                     workbook = writer.book
+                    light_gray = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
+                    dark_gray = PatternFill(start_color="B0B0B0", end_color="B0B0B0", fill_type="solid")
+
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
 
@@ -123,35 +126,22 @@ def main():
                             col_letter = get_column_letter(col[0].column)
                             sheet.column_dimensions[col_letter].width = max_length + 2
 
-                        # Fahrerüberschriften hervorheben
-                        for row in sheet.iter_rows():
-                            if row[0].value and "Gesamtverdienst" not in str(row[0].value):
-                                if row[0].value and "Datum" in str(row[0].value):
-                                    # Kopfzeile hervorheben
-                                    for cell in row:
-                                        cell.fill = PatternFill(start_color="FFFFCC", end_color="FFFFCC", fill_type="solid")
-                                        cell.font = Font(bold=True)
-                                elif row[0].value:
-                                    # Fahrerüberschrift hervorheben
-                                    for cell in row:
-                                        cell.fill = PatternFill(start_color="CCFF99", end_color="CCFF99", fill_type="solid")
-                                        cell.font = Font(bold=True)
-                                        cell.alignment = Alignment(horizontal="center")
-
-                        # Umrahmung für alle Zellen
-                        thin_border = Border(
-                            left=Side(style='thin'), right=Side(style='thin'),
-                            top=Side(style='thin'), bottom=Side(style='thin')
-                        )
-                        for row in sheet.iter_rows():
+                        # Farben für Zeilen abwechselnd
+                        for i, row in enumerate(sheet.iter_rows(min_row=2), start=1):
+                            fill = light_gray if i % 2 == 0 else dark_gray
                             for cell in row:
-                                cell.border = thin_border
+                                cell.fill = fill
+
+                        # Kopfzeilen hervorheben
+                        for cell in sheet[1]:
+                            cell.fill = PatternFill(start_color="D0D0D0", end_color="D0D0D0", fill_type="solid")
+                            cell.font = Font(bold=True)
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_nach_fahrern_visualisiert.xlsx",
+                        file_name="auswertung_nach_fahrern_grau.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
