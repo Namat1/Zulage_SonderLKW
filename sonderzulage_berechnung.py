@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Detaillierte Touren-Auswertung mit Farbschema und Grid")
+    st.title("Detaillierte Touren-Auswertung mit hervorgehobenen Namen")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_nach_fahrern_farben.xlsx"
+            output_file = "auswertung_nach_fahrern_hervorgehoben.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -116,7 +116,6 @@ def main():
                     workbook = writer.book
                     light_blue = PatternFill(start_color="B7CCE2", end_color="B7CCE2", fill_type="solid")
                     dark_blue = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-                    light_beige = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
                     thin_border = Border(
                         left=Side(style='thin'), right=Side(style='thin'),
                         top=Side(style='thin'), bottom=Side(style='thin')
@@ -133,36 +132,32 @@ def main():
 
                         # Farben und Umrandung
                         for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            if row_idx == 1:
-                                # Kopfzeile farbig gestalten
+                            if row[0].value and row[0].value.split(" ")[0].isalpha():
+                                # Fahrername hervorheben
                                 for cell in row:
                                     cell.fill = dark_blue
-                                    cell.font = Font(bold=True, color="FFFFFF")
+                                    cell.font = Font(size=14, bold=True, color="FFFFFF")
                                     cell.alignment = Alignment(horizontal="center", vertical="center")
+                                    cell.border = thin_border
                             elif row[0].value and "Gesamtverdienst" in str(row[0].value):
                                 # Gesamtverdienst hervorheben
                                 for cell in row:
-                                    cell.fill = light_beige
+                                    cell.fill = light_blue
                                     cell.font = Font(bold=True)
                                     cell.border = thin_border
-                            elif row[0].value and row_idx % 2 == 0:
-                                # Abwechselnde Zeilen
+                            elif row[0].value and "Datum" in str(row[0].value):
+                                # Kopfzeile hervorheben
                                 for cell in row:
                                     cell.fill = light_blue
-                                    cell.border = thin_border
-                            elif row[0].value:
-                                # Fahrerüberschrift
-                                for cell in row:
-                                    cell.fill = dark_blue
-                                    cell.font = Font(bold=True, color="FFFFFF")
-                                    cell.alignment = Alignment(horizontal="left")
+                                    cell.font = Font(bold=True)
+                                    cell.alignment = Alignment(horizontal="center", vertical="center")
                                     cell.border = thin_border
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_nach_fahrern_farben.xlsx",
+                        file_name="auswertung_nach_fahrern_hervorgehoben.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
