@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def main():
-    st.title("Detaillierte Touren-Auswertung mit dezenter Farbgestaltung")
+    st.title("Detaillierte Touren-Auswertung mit Farbschema und Grid")
 
     # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -71,7 +71,7 @@ def main():
 
         # Export der Ergebnisse nach Monaten
         if not all_data.empty:
-            output_file = "auswertung_nach_fahrern_grau.xlsx"
+            output_file = "auswertung_nach_fahrern_farben.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     # Sortiere nach Jahr und Monat aufsteigend
@@ -114,8 +114,13 @@ def main():
 
                     # Automatische Spaltenbreite und Farbliche Anpassung
                     workbook = writer.book
-                    light_gray = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
-                    dark_gray = PatternFill(start_color="B0B0B0", end_color="B0B0B0", fill_type="solid")
+                    light_blue = PatternFill(start_color="B7CCE2", end_color="B7CCE2", fill_type="solid")
+                    dark_blue = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+                    light_beige = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                    thin_border = Border(
+                        left=Side(style='thin'), right=Side(style='thin'),
+                        top=Side(style='thin'), bottom=Side(style='thin')
+                    )
 
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
@@ -126,22 +131,38 @@ def main():
                             col_letter = get_column_letter(col[0].column)
                             sheet.column_dimensions[col_letter].width = max_length + 2
 
-                        # Farben für Zeilen abwechselnd
-                        for i, row in enumerate(sheet.iter_rows(min_row=2), start=1):
-                            fill = light_gray if i % 2 == 0 else dark_gray
-                            for cell in row:
-                                cell.fill = fill
-
-                        # Kopfzeilen hervorheben
-                        for cell in sheet[1]:
-                            cell.fill = PatternFill(start_color="D0D0D0", end_color="D0D0D0", fill_type="solid")
-                            cell.font = Font(bold=True)
+                        # Farben und Umrandung
+                        for row_idx, row in enumerate(sheet.iter_rows(), start=1):
+                            if row_idx == 1:
+                                # Kopfzeile farbig gestalten
+                                for cell in row:
+                                    cell.fill = dark_blue
+                                    cell.font = Font(bold=True, color="FFFFFF")
+                                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                            elif row[0].value and "Gesamtverdienst" in str(row[0].value):
+                                # Gesamtverdienst hervorheben
+                                for cell in row:
+                                    cell.fill = light_beige
+                                    cell.font = Font(bold=True)
+                                    cell.border = thin_border
+                            elif row[0].value and row_idx % 2 == 0:
+                                # Abwechselnde Zeilen
+                                for cell in row:
+                                    cell.fill = light_blue
+                                    cell.border = thin_border
+                            elif row[0].value:
+                                # Fahrerüberschrift
+                                for cell in row:
+                                    cell.fill = dark_blue
+                                    cell.font = Font(bold=True, color="FFFFFF")
+                                    cell.alignment = Alignment(horizontal="left")
+                                    cell.border = thin_border
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="auswertung_nach_fahrern_grau.xlsx",
+                        file_name="auswertung_nach_fahrern_farben.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
