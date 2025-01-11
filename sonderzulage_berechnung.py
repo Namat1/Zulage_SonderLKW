@@ -169,6 +169,8 @@ def apply_styles(sheet):
 
 
 
+
+
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle (Name, Personalnummer, Gesamtverdienst) in das Sheet ein.
@@ -215,6 +217,38 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
             len(str(sheet.cell(row=row, column=col).value) or "") for row in range(2, len(summary_data) + 4)
         )
         sheet.column_dimensions[get_column_letter(col)].width = max_length + 1
+
+
+def main():
+    # Beispielhafte Monatsdaten
+    month_number = 1  # Januar
+    year = 2024
+
+    # Monatsname generieren
+    month_name = f"{calendar.month_name[month_number]} {year}"  # Ausgabe: "Januar 2024"
+
+    # Dummy-Daten für die Zusammenfassung
+    summary_data = [
+        ("Philipp Adler", "00041450", 200.00),
+        ("Sven Buth", "00046673", 400.00),
+        ("Eric-Rene Scheil", "00038579", 100.00)
+    ]
+
+    # Beispiel-Workbook und Sheet
+    wb = Workbook()
+    sheet = wb.active
+    sheet.title = month_name
+
+    # Zusammenfassung hinzufügen
+    add_summary(sheet, summary_data, start_col=9, month_name=month_name)
+
+    # Datei speichern
+    wb.save("auszahlung_test.xlsx")
+    print(f"Auszahlung für {month_name} wurde erstellt.")
+
+if __name__ == "__main__":
+    main()
+
 
 
 
