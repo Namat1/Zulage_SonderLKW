@@ -10,19 +10,28 @@ def apply_styles(sheet):
     """
     Dynamische Anwendung eines klaren und übersichtlichen Business-Stils:
     - Namenszeilen: Blau, fett.
+    - Gesamtverdienstzeilen: Grün, fett.
     - Datum-/Kopfzeilen: Hellgrau, fett.
     - Datenzeilen: Weiß, standard.
     """
+    # Stildefinitionen
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="3399FF", end_color="3399FF", fill_type="solid")  # Blau für Namenszeilen
-    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Kopfzeilen
+    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für Namenszeilen
+    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")  # Hellgrün für Gesamtverdienst
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Datum-/Kopfzeilen
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
 
-    for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-        if row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
+    for row in sheet.iter_rows():
+        if row[0].value and "Gesamtverdienst" in str(row[0].value):  # Gesamtverdienstzeile
+            for cell in row:
+                cell.fill = total_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = thin_border
+        elif row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True)
@@ -40,7 +49,6 @@ def apply_styles(sheet):
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="left")
                 cell.border = thin_border
-
 
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
