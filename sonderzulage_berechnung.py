@@ -249,7 +249,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
 
 def main():
-    st.title("Touren-Auswertung mit Monatszusammenfassung")
+    st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
