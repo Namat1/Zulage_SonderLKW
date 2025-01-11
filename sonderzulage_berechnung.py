@@ -183,8 +183,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         top=Side(style='thin'), bottom=Side(style='thin')
     )
 
-    # Auszahlung Monat in Zeile 2
-    auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat:"
+    # Zeile 2: Auszahlung Monat
+    if not month_name:
+        month_name = "Unbekannt"  # Fallback für fehlende Monatsnamen
+    auszahlung_text = f"Auszahlung Monat: {month_name}"
     auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
     sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
     auszahlung_cell.font = Font(bold=True, size=12)
@@ -192,7 +194,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     auszahlung_cell.fill = header_fill
     auszahlung_cell.border = thin_border
 
-    # Kopfzeile der Zusammenfassung in Zeile 3
+    # Zeile 3: Kopfzeilen der Zusammenfassung
     sheet.cell(row=3, column=start_col, value="Name")
     sheet.cell(row=3, column=start_col + 1, value="Personalnummer")
     sheet.cell(row=3, column=start_col + 2, value="Gesamtverdienst (€)")
@@ -217,7 +219,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         max_length = max(
             len(str(sheet.cell(row=row, column=col).value) or "") for row in range(2, len(summary_data) + 4)
         )
-        sheet.column_dimensions[get_column_letter(col)].width = max_length + 1
+        sheet.column_dimensions[get_column_letter(col)].width = max_length + 3  # Extra Platz
 
 
 
