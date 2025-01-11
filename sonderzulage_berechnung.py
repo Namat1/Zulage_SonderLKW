@@ -5,7 +5,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-
 # Personalnummer-Zuordnung
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
@@ -90,7 +89,6 @@ name_to_personalnummer = {
 }
 
 
-
 def apply_styles(sheet):
     """
     Dynamische Anwendung eines klaren und übersichtlichen Business-Stils:
@@ -171,27 +169,6 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
-
-
-      
-
-        elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
-            for cell in row:
-                cell.fill = header_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
-                cell.border = thin_border
-
-        else:  # Datenzeilen
-            for cell in row:
-                cell.fill = data_fill
-                cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="right")
-                cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
-                    cell.number_format = '#,##0.00 €'
-
-
 
     # Blende die erste Zeile aus
     sheet.row_dimensions[1].hidden = True
