@@ -199,8 +199,8 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=i, column=start_col, value=name).border = thin_border
 
-        # Personalnummer als reinen Text behandeln (grüne Dreiecke verhindern)
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=f"{personalnummer}")
+        # Personalnummer als Text behandeln (grüne Dreiecke verhindern)
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=f" {personalnummer}")
         personalnummer_cell.number_format = '@'  # '@' steht für "Textformat" in Excel
         personalnummer_cell.border = thin_border
 
