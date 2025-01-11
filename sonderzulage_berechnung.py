@@ -168,7 +168,7 @@ def apply_styles(sheet):
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive Gesamtsumme aller Verdienste,
-    und behandelt Personalnummern korrekt, ohne grüne Dreiecke.
+    und stellt die Personalnummern als Zahlen dar (mit führenden Nullen).
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
@@ -199,9 +199,16 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=i, column=start_col, value=name).border = thin_border
 
-        # Personalnummer als Text behandeln (grüne Dreiecke verhindern)
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=f" {personalnummer}")
-        personalnummer_cell.number_format = '@'  # '@' steht für "Textformat" in Excel
+        # Personalnummer als Zahl darstellen
+        if personalnummer.isdigit():
+            numeric_personalnummer = int(personalnummer)  # Konvertieren in Zahl
+            personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=numeric_personalnummer)
+            personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
+        else:
+            # Bei "Unbekannt" oder anderen Texten als Text speichern
+            personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
+            personalnummer_cell.number_format = '@'
+
         personalnummer_cell.border = thin_border
 
         # Gesamtverdienst mit Währungsformat
@@ -221,6 +228,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
+
 
 
 
