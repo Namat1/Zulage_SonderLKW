@@ -9,7 +9,7 @@ from openpyxl.utils import get_column_letter
 def apply_styles(sheet):
     """
     Dynamische Anwendung eines klaren und übersichtlichen Business-Stils:
-    - Namenszeilen: Hellblau, fett.
+    - Namenszeilen: Hellblau, fett, verbunden.
     - Kopfzeilen (Überschriften): Hellgrau, fett.
     - Gesamtverdienstzeilen: Hellgrün, fett.
     - Datenzeilen: Weiß, normal.
@@ -25,24 +25,27 @@ def apply_styles(sheet):
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")  # Hellgrün für Gesamtverdienstzeilen
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
 
-    for row in sheet.iter_rows():
+    for row_idx, row in enumerate(sheet.iter_rows(), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
         if "Gesamtverdienst" in first_cell_value:  # Gesamtverdienstzeilen
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
+                cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
 
         elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
-            for cell in row:
-                cell.fill = name_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
-                cell.border = thin_border
+            # Verbinden der Namenszeile über alle Spalten
+            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+            row[0].fill = name_fill
+            row[0].font = Font(bold=True)
+            row[0].alignment = Alignment(horizontal="center")
+            row[0].border = thin_border
+            for cell in row[1:]:
+                cell.value = None  # Leere Zellen hinter dem Namen
 
         elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
             for cell in row:
@@ -55,7 +58,7 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="right")
+                cell.alignment = Alignment(horizontal="left")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
