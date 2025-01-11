@@ -240,76 +240,63 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
             if cell.value is None:
                 cell.border = thin_border
 
-
-
-
-
-
-
-
-
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
-    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
+    # Hochladen der Dateien
+    uploaded_files = st.file_uploader(
+        "Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True
+    )
 
     if uploaded_files:
         all_data = pd.DataFrame()
 
-    # Verarbeitung der hochgeladenen Dateien
-if uploaded_files:
-    all_data = pd.DataFrame()
-    for uploaded_file in uploaded_files:
-        try:
-            df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-            # Verarbeitungslogik hier
-        except Exception as e:
-            st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
-else:
-    st.warning("Keine Dateien hochgeladen.")
+        for uploaded_file in uploaded_files:
+            try:
+                # Datei einlesen
+                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
 
-    try:
-        df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-        filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-        if not filtered_df.empty:
-            filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
-            filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
-        if filtered_df.empty:
-            st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
-            continue
+                # Daten filtern
+                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+                if not filtered_df.empty:
+                    filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+                    filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+                if filtered_df.empty:
+                    st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
+                    continue
 
-        # Relevante Spalten extrahieren
-        columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-        extracted_data = filtered_df.iloc[:, columns_to_extract]
-        extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
+                # Relevante Spalten extrahieren
+                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
+                extracted_data = filtered_df.iloc[:, columns_to_extract]
+                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
 
-        # Konvertiere Datum und füge Wochentag und KW hinzu
-        extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-        extracted_data["Wochentag"] = extracted_data["Datum"].dt.strftime('%A')  # Wochentag hinzufügen
-        extracted_data["Kalenderwoche"] = extracted_data["Datum"].dt.isocalendar().week  # KW hinzufügen
+                # Neue Spalten hinzufügen
+                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+                extracted_data["Wochentag"] = extracted_data["Datum"].dt.strftime('%A')
+                extracted_data["Kalenderwoche"] = extracted_data["Datum"].dt.isocalendar().week
 
-        # Berechnung des Verdienstes
-        def calculate_earnings(row):
-            lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-            earnings = 0
-            for value in lkw_values:
-                if value in [602, 156]:
-                    earnings += 40
-                elif value in [620, 350, 520]:
-                    earnings += 20
-            return earnings
+                # Verdienst berechnen
+                def calculate_earnings(row):
+                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
+                    earnings = 0
+                    for value in lkw_values:
+                        if value in [602, 156]:
+                            earnings += 40
+                        elif value in [620, 350, 520]:
+                            earnings += 20
+                    return earnings
 
-        extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-        extracted_data["Monat"] = extracted_data["Datum"].dt.month
-        extracted_data["Jahr"] = extracted_data["Datum"].dt.year
+                extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
+                extracted_data["Monat"] = extracted_data["Datum"].dt.month
+                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
 
-        # Zusammenführen der Daten
-        all_data = pd.concat([all_data, extracted_data], ignore_index=True)
+                # Daten zusammenführen
+                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
-    except Exception as e:
-        st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
+            except Exception as e:
+                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-
+        # Daten exportieren
         if not all_data.empty:
             output_file = "touren_auswertung_korrekt.xlsx"
             try:
@@ -324,27 +311,26 @@ else:
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
-                            try:
-                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
-                            except KeyError:
-                                month_name = f"Unbekannter Monat {year}"
-
+                            month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
                             sheet_data = []
                             summary_data = []
+
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 total_earnings = group["Verdienst"].sum()
                                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
                                 summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
 
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst", "Wochentag", "Kalenderwoche"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
                                         row["Datum"].strftime("%d.%m.%Y"),
                                         row["Tour"],
                                         row["LKW"],
                                         row["Art"],
-                                        row["Verdienst"]
+                                        row["Verdienst"],
+                                        row["Wochentag"],
+                                        row["Kalenderwoche"]
                                     ])
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
                                 sheet_data.append([])
@@ -366,7 +352,8 @@ else:
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
-
+    else:
+        st.warning("Keine Dateien hochgeladen.")
 
 if __name__ == "__main__":
     main()
