@@ -257,7 +257,17 @@ def main():
         all_data = pd.DataFrame()
 
     # Verarbeitung der hochgeladenen Dateien
-for uploaded_file in uploaded_files:
+if uploaded_files:
+    all_data = pd.DataFrame()
+    for uploaded_file in uploaded_files:
+        try:
+            df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+            # Verarbeitungslogik hier
+        except Exception as e:
+            st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
+else:
+    st.warning("Keine Dateien hochgeladen.")
+
     try:
         df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
         filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
