@@ -144,12 +144,11 @@ def apply_styles(sheet):
             row[0].fill = name_fill
             row[0].font = Font(bold=True)
             row[0].alignment = Alignment(horizontal="center")
-            row[0].border = thin_border  # Grid für Namenszeile hinzufügen
+            row[0].border = thin_border  # Grid für die zusammengeführte Zelle
 
-            # Leere Zellen hinter dem Namen ohne Grid
-            for cell in row[1:]:
-                cell.value = None
-                cell.border = None  # Entferne Grid von leeren Zellen
+            # Wende das Grid auf alle Zellen der Namenszeile an
+            for cell in row:
+                cell.border = thin_border
 
         elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
             for cell in row:
@@ -166,6 +165,7 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
+
 
 
     # Blende die erste Zeile aus
