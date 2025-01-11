@@ -7,16 +7,15 @@ from openpyxl.utils import get_column_letter
 
 def apply_styles(sheet):
     """
-    Dynamische Anwendung von Stilen auf die Excel-Zeilen.
-    Separate Farben für Name- und Datum-Zeilen.
+    Dynamische Anwendung eines Business-Stils auf die Excel-Zeilen.
     """
     # Stildefinitionen
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="0000FF", end_color="0000FF", fill_type="solid")  # Blau für Namenszeilen
-    header_fill = PatternFill(start_color="C0C0C0", end_color="C0C0C0", fill_type="solid")  # Grau für Datum-/Kopfzeilen
+    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für Namenszeilen
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Datum-/Kopfzeilen
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
 
     for row_idx, row in enumerate(sheet.iter_rows(), start=1):
@@ -35,7 +34,8 @@ def apply_styles(sheet):
         else:  # Datenzeilen
             for cell in row:
                 cell.fill = data_fill
-                cell.font = Font(bold=False)  # Nicht fett für Daten
+                cell.font = Font(bold=False)  # Standard-Schrift für Datenzeilen
+                cell.alignment = Alignment(horizontal="left")  # Links ausgerichtet
                 cell.border = thin_border
 
 
