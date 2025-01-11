@@ -88,6 +88,7 @@ name_to_personalnummer = {
     "Zosel": {"Ingo": "00026303"},
 }
 
+
 def apply_styles(sheet):
     """
     Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E, 
@@ -164,7 +165,6 @@ def apply_styles(sheet):
     # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
 
-
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive Gesamtsumme aller Verdienste,
@@ -230,8 +230,13 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     total_sum_cell.border = thin_border
 
 
+
+
+
+
+
 def main():
-    st.title("Zulage - Sonderfahrzeuge")
+    st.title("Touren-Auswertung mit Monatszusammenfassung")
 
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
@@ -250,9 +255,6 @@ def main():
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-
-                start_date = pd.Timestamp("2025-01-01")
-                extracted_data = extracted_data[extracted_data["Datum"] >= start_date]
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
@@ -286,18 +288,39 @@ def main():
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
-                            month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
+                            try:
+                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
+                            except KeyError:
+                                month_name = f"Unbekannter Monat {year}"
+
+                            sheet_data = []
                             summary_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 total_earnings = group["Verdienst"].sum()
                                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
                                 summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
 
-                            sheet = writer.book.create_sheet(title=month_name[:31])
+                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
+                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                                for _, row in group.iterrows():
+                                    sheet_data.append([
+                                        row["Datum"].strftime("%d.%m.%Y"),
+                                        row["Tour"],
+                                        row["LKW"],
+                                        row["Art"],
+                                        row["Verdienst"]
+                                    ])
+                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                                sheet_data.append([])
+
+                            sheet_df = pd.DataFrame(sheet_data)
+                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
+
+                            sheet = writer.sheets[month_name[:31]]
                             add_summary(sheet, summary_data, start_col=9, month_name=month_name)
+
                             apply_styles(sheet)
 
-                st.success("Die Auswertung wurde erfolgreich erstellt.")
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
@@ -307,6 +330,7 @@ def main():
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
+
 
 if __name__ == "__main__":
     main()
