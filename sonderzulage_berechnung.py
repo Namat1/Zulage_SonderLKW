@@ -169,10 +169,10 @@ def apply_styles(sheet):
 
 
 
-def add_summary(sheet, summary_data, start_col=9):
+def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle (Name, Personalnummer, Gesamtverdienst) in das Sheet ein.
-    Die Zusammenfassung wird formatiert, um klarer und übersichtlicher zu sein.
+    Fügt eine Kopfzeile "Auszahlung Monat" über der Zusammenfassung hinzu.
     """
     # Überschriften für die Zusammenfassung
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
@@ -181,12 +181,19 @@ def add_summary(sheet, summary_data, start_col=9):
         top=Side(style='thin'), bottom=Side(style='thin')
     )
 
-    sheet.cell(row=1, column=start_col, value="Zusammenfassung")
+    # Auszahlung Monat
+    auszahlung_cell = sheet.cell(row=1, column=start_col, value=f"Auszahlung Monat: {month_name}")
+    sheet.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=start_col + 2)
+    auszahlung_cell.font = Font(bold=True, size=12)
+    auszahlung_cell.alignment = Alignment(horizontal="center", vertical="center")
+    auszahlung_cell.fill = header_fill
+    auszahlung_cell.border = thin_border
+
+    # Kopfzeile der Zusammenfassung
     sheet.cell(row=2, column=start_col, value="Name")
     sheet.cell(row=2, column=start_col + 1, value="Personalnummer")
     sheet.cell(row=2, column=start_col + 2, value="Gesamtverdienst (€)")
 
-    # Formatierung der Kopfzeile
     for col in range(start_col, start_col + 3):
         header_cell = sheet.cell(row=2, column=col)
         header_cell.font = Font(bold=True)
@@ -208,6 +215,7 @@ def add_summary(sheet, summary_data, start_col=9):
             len(str(sheet.cell(row=row, column=col).value) or "") for row in range(1, len(summary_data) + 3)
         )
         sheet.column_dimensions[get_column_letter(col)].width = max_length + 1
+
 
 
 def main():
