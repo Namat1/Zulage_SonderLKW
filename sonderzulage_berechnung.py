@@ -98,7 +98,6 @@ def apply_styles(sheet):
     - Kopfzeilen (Überschriften): Hellgrau, fett.
     - Gesamtverdienstzeilen: Hellgrün, fett.
     - Datenzeilen: Weiß, normal.
-    - Leerzeilen: Kein Grid.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -116,6 +115,58 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="right")
+                cell.border = thin_border
+                if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
+                    cell.number_format = '#,##0.00 €'
+
+        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
+            try:
+                vorname, nachname = first_cell_value.split(" ", 1)
+                vorname = "".join(vorname.strip().split()).title()
+                nachname = "".join(nachname.strip().split()).title()
+
+                # Versuche direkte Zuordnung und alternative Schreibweisen
+                personalnummer = (
+                    name_to_personalnummer.get(nachname, {}).get(vorname)
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))  # Ohne Bindestrich
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))  # Mit Bindestrich
+                    or "Unbekannt"
+                )
+
+            except ValueError:
+                personalnummer = "Unbekannt"
+
+            # Verbinden der Namenszeile über alle Spalten
+            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+            row[0].value = f"{first_cell_value} - {personalnummer}"  # Füge Personalnummer hinzu
+            row[0].fill = name_fill
+            row[0].font = Font(bold=True)
+            row[0].alignment = Alignment(horizontal="center")
+
+            # Grid für die gesamte Namenszeile
+            for cell in row:
+                cell.border = thin_border
+
+            # Spezifisch: Rechte Kante der zusammengeführten Zelle
+            row[4].border = Border(
+                left=thin_border.left,
+                right=thin_border.right,  # Rechte Kante explizit setzen
+                top=thin_border.top,
+                bottom=thin_border.bottom,
+            )
+
+        elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
+            for cell in row:
+                cell.fill = header_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = thin_border
+
+        else:  # Datenzeilen
+            for cell in row:
+                cell.fill = data_fill
+                cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
