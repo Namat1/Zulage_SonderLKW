@@ -257,20 +257,21 @@ def main():
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                try:
-                    extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-                except Exception as e:
-                    st.error(f"Fehler bei der Datums-Konvertierung: {e}")
-
+                # Debugging: Inhalt der Spalte 'Datum' anzeigen
+                st.write("Inhalt der Spalte 'Datum':", extracted_data.iloc[:, 14].head(10))
+                
+                # Sicherstellen, dass 'Datum' als datetime erkannt wird
+                extracted_data["Datum"] = pd.to_datetime(extracted_data.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+                
                 # Überprüfen auf ungültige Werte
                 if extracted_data["Datum"].isnull().any():
                     st.warning("Einige Zeilen haben ungültige Datumswerte und werden ignoriert.")
                 extracted_data = extracted_data.dropna(subset=["Datum"])
-
+                
                 # Hinzufügen von Wochentag und KW
                 extracted_data["Wochentag"] = extracted_data["Datum"].dt.strftime("%A")
                 extracted_data["KW"] = extracted_data["Datum"].dt.isocalendar().week
-
+                
                 # Datum mit Wochentag und KW kombinieren
                 extracted_data["Datum"] = extracted_data["Datum"].dt.strftime("%d.%m.%Y") + " (" +                                           extracted_data["Wochentag"] + ", KW" +                                           extracted_data["KW"].astype(str) + ")" 
 
