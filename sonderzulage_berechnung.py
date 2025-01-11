@@ -274,6 +274,8 @@ def main():
         st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
 
+
+
         if not all_data.empty:
             output_file = "touren_auswertung_korrekt.xlsx"
             try:
