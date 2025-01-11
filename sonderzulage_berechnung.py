@@ -128,7 +128,8 @@ def apply_styles(sheet):
                 # Versuche direkte Zuordnung
                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
 
-                
+            except ValueError:
+                personalnummer = "Unbekannt"
 
             # Verbinden der Namenszeile über alle Spalten
             sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
