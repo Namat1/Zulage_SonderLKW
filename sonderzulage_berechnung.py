@@ -230,18 +230,9 @@ def main():
                             month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
 
                             sheet_data = []
-                            summary_data = []  # Für die Zusammenfassung
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                # Berechnung des Gesamtverdienstes
                                 total_earnings = group["Verdienst"].sum()
-                                personalnummer = (
-                                    name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                                )
-                                # Hinzufügen zur Zusammenfassung
-                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
-
-                                # Sheet-Daten hinzufügen
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
+                                sheet_data.append([f"{vorname} {nachname}", "", "", "", total_earnings])
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
@@ -254,38 +245,17 @@ def main():
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
                                 sheet_data.append([])
 
-                            # Daten und Zusammenfassung schreiben
                             sheet_df = pd.DataFrame(sheet_data)
                             sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
-
-                            # Zusammenfassung ab Spalte 9 (I)
-                            summary_sheet = writer.sheets[month_name[:31]]
-                            summary_start_col = 9  # Spalte I
-                            summary_sheet.cell(row=1, column=summary_start_col, value="Zusammenfassung")
-                            summary_sheet.cell(row=2, column=summary_start_col, value="Name")
-                            summary_sheet.cell(row=2, column=summary_start_col + 1, value="Personalnummer")
-                            summary_sheet.cell(row=2, column=summary_start_col + 2, value="Gesamtverdienst (€)")
-
-                            for idx, summary_row in enumerate(summary_data, start=3):
-                                for col_idx, value in enumerate(summary_row, start=summary_start_col):
-                                    summary_sheet.cell(row=idx, column=col_idx, value=value)
 
                     workbook = writer.book
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
-                    for col in sheet.columns:
-                        # Finde alle Werte in der Spalte
-                        values = [str(cell.value) for cell in col if cell.value]
-    
-                        # Prüfe, ob Werte existieren
-                        if values:
-                            max_length = max(len(value) for value in values)
-                        else:
-                            max_length = 10  # Standardbreite, falls Spalte leer ist
-    
-                        col_letter = get_column_letter(col[0].column)
-                        sheet.column_dimensions[col_letter].width = max_length + 2
-
+                        for col in sheet.columns:
+                            values = [str(cell.value) for cell in col if cell.value]
+                            max_length = max(len(value) for value in values) if values else 10
+                            col_letter = get_column_letter(col[0].column)
+                            sheet.column_dimensions[col_letter].width = max_length + 2
                         apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
