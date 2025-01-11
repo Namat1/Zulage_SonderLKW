@@ -113,25 +113,22 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
+                cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
 
         elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
             try:
-                # Hole Vorname und Nachname, bereinige Leerzeichen und Sonderzeichen
                 vorname, nachname = first_cell_value.split(" ", 1)
                 nachname = nachname.strip().capitalize()
                 vorname = vorname.strip().capitalize()
 
-                # Versuche direkte Zuordnung
                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
 
             except ValueError:
                 personalnummer = "Unbekannt"
 
-            # Verbinden der Namenszeile über alle Spalten
             sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
             row[0].value = f"{first_cell_value} - {personalnummer}"  # Füge Personalnummer hinzu
             row[0].fill = name_fill
@@ -145,14 +142,14 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
+                cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
 
         else:  # Datenzeilen
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="right")
+                cell.alignment = Alignment(horizontal="left")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
@@ -175,11 +172,11 @@ def main():
 
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
-                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW2", "LKW3", "Datum"]
+                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
                 def calculate_earnings(row):
-                    lkw_values = [row["LKW1"], row["LKW2"], row["LKW3"]]
+                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
                     earnings = 0
                     for value in lkw_values:
                         if value in [602, 156]:
@@ -215,7 +212,7 @@ def main():
                             sheet_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
+                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
                                         row["Datum"].strftime("%d.%m.%Y"),
