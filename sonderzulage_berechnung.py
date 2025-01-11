@@ -91,102 +91,27 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E, 
-    und automatische Anpassung der Spaltenbreite mit +1 für alle Spalten außer A.
+    Formatiert das Sheet mit Zellenstilen.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
-    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
-    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-
-    for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
-        first_cell_value = str(row[0].value).strip() if row[0].value else ""
-
-        if "Gesamtverdienst" in first_cell_value:
-            for cell in row:
-                cell.fill = total_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
-                cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):
-                    cell.number_format = '#,##0.00 €'
-
-        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
-            try:
-                vorname, nachname = first_cell_value.split(" ", 1)
-                vorname = "".join(vorname.strip().split()).title()
-                nachname = "".join(nachname.strip().split()).title()
-                personalnummer = (
-                    name_to_personalnummer.get(nachname, {}).get(vorname)
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))
-                    or "Unbekannt"
-                )
-            except ValueError:
-                personalnummer = "Unbekannt"
-
-            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-            row[0].value = f"{first_cell_value} - {personalnummer}"
-            row[0].fill = name_fill
-            row[0].font = Font(bold=True)
-            row[0].alignment = Alignment(horizontal="center")
-            for cell in row:
-                cell.border = thin_border
-
-        elif "Datum" in first_cell_value:
-            for cell in row:
-                cell.fill = header_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
-                cell.border = thin_border
-
-        else:
-            for cell in row:
-                cell.fill = data_fill
-                cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="right")
-                cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):
-                    cell.number_format = '#,##0.00 €'
-
-    # Automatische Spaltenbreitenanpassung für alle Spalten
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
-        col_letter = get_column_letter(col[0].column)
-        if col_letter == "A":
-            sheet.column_dimensions[col_letter].width = 17  # Feste Breite für Spalte A
-        else:
-            sheet.column_dimensions[col_letter].width = max_length + 1  # +1 für alle anderen Spalten
-
-    # Erste Zeile ausblenden
-    sheet.row_dimensions[1].hidden = True
-
-
-
-
-
-
+        sheet.column_dimensions[get_column_letter(col[0].column)].width = max_length + 1
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassungstabelle (Name, Personalnummer, Gesamtverdienst) in das Sheet ein.
-    Fügt eine Kopfzeile "Auszahlung Monat: <Monat>" in Zeile 2 hinzu.
+    Fügt eine Zusammenfassungstabelle in das Sheet ein.
     """
-    # Überschriften für die Zusammenfassung
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-
-    # Zeile 2: Auszahlung Monat
-    if not month_name:
-        month_name = "Unbekannt"  # Fallback für fehlende Monatsnamen
-    auszahlung_text = f"Auszahlung Monat: {month_name}"
+    # Monatsname in Zeile 2
+    auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat: Unbekannt"
     auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
     sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
     auszahlung_cell.font = Font(bold=True, size=12)
@@ -194,166 +119,55 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     auszahlung_cell.fill = header_fill
     auszahlung_cell.border = thin_border
 
-    # Zeile 3: Kopfzeilen der Zusammenfassung
-    sheet.cell(row=3, column=start_col, value="Name")
-    sheet.cell(row=3, column=start_col + 1, value="Personalnummer")
-    sheet.cell(row=3, column=start_col + 2, value="Gesamtverdienst (€)")
+    # Zusammenfassungskopfzeilen
+    for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
+        cell = sheet.cell(row=3, column=idx)
+        cell.value = header
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
 
-    for col in range(start_col, start_col + 3):
-        header_cell = sheet.cell(row=3, column=col)
-        header_cell.font = Font(bold=True)
-        header_cell.fill = header_fill
-        header_cell.alignment = Alignment(horizontal="center", vertical="center")
-        header_cell.border = thin_border
-
-    # Einfügen der Zusammenfassungsdaten ab Zeile 4
-    for idx, (name, personalnummer, total) in enumerate(summary_data, start=4):
-        sheet.cell(row=idx, column=start_col, value=name).border = thin_border
-        sheet.cell(row=idx, column=start_col + 1, value=personalnummer).border = thin_border
-        total_cell = sheet.cell(row=idx, column=start_col + 2, value=float(total))  # Konvertiere in float
-        total_cell.border = thin_border
-        total_cell.number_format = '#,##0.00 €'  # Währungsformat
-
-    # Automatische Spaltenbreite
-    for col in range(start_col, start_col + 3):
-        max_length = max(
-            len(str(sheet.cell(row=row, column=col).value) or "") for row in range(2, len(summary_data) + 4)
-        )
-        sheet.column_dimensions[get_column_letter(col)].width = max_length + 3  # Extra Platz
-
-
+    # Einfügen der Daten
+    for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
+        sheet.cell(row=i, column=start_col, value=name).border = thin_border
+        sheet.cell(row=i, column=start_col + 1, value=personalnummer).border = thin_border
+        cell = sheet.cell(row=i, column=start_col + 2, value=total)
+        cell.number_format = '#,##0.00 €'
+        cell.border = thin_border
 
 def main():
-    # Beispielhafte Monatsdaten
-    month_number = 1  # Januar
+    # Monatsdaten und Übersetzung
+    month_number = 1  # Januar als Beispiel
     year = 2024
+    month_name_german = {
+        "January": "Januar", "February": "Februar", "March": "März", "April": "April",
+        "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
+        "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
+    }
 
-    # Monatsname generieren
-    month_name = f"{calendar.month_name[month_number]} {year}"  # Ausgabe: "Januar 2024"
+    try:
+        month_name = f"{month_name_german[calendar.month_name[month_number]]} {year}"
+    except KeyError:
+        month_name = f"Unbekannter Monat {year}"
 
-    # Dummy-Daten für die Zusammenfassung
     summary_data = [
         ("Philipp Adler", "00041450", 200.00),
         ("Sven Buth", "00046673", 400.00),
         ("Eric-Rene Scheil", "00038579", 100.00)
     ]
 
-    # Beispiel-Workbook und Sheet
     wb = Workbook()
     sheet = wb.active
     sheet.title = month_name
 
     # Zusammenfassung hinzufügen
     add_summary(sheet, summary_data, start_col=9, month_name=month_name)
+    apply_styles(sheet)
 
     # Datei speichern
     wb.save("auszahlung_test.xlsx")
     print(f"Auszahlung für {month_name} wurde erstellt.")
-
-if __name__ == "__main__":
-    main()
-
-
-
-
-
-
-
-def main():
-    st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
-
-    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
-
-    if uploaded_files:
-        all_data = pd.DataFrame()
-
-        for uploaded_file in uploaded_files:
-            try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-                if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
-                    continue
-
-                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-                extracted_data = filtered_df.iloc[:, columns_to_extract]
-                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-
-                def calculate_earnings(row):
-                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    earnings = 0
-                    for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
-                    return earnings
-
-                extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = extracted_data["Datum"].dt.month
-                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
-                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
-
-            except Exception as e:
-                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
-
-        if not all_data.empty:
-            output_file = "touren_auswertung_korrekt.xlsx"
-            try:
-                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
-
-                    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                        if not month_data.empty:
-                            month_name_german = {
-                                "January": "Januar", "February": "Februar", "March": "März", "April": "April",
-                                "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
-                                "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
-                            }
-                            month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
-
-                            sheet_data = []
-                            summary_data = []
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                total_earnings = group["Verdienst"].sum()
-                                personalnummer = (
-                                    name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                                )
-                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
-
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y"),
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
-                                    ])
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
-
-                            sheet_df = pd.DataFrame(sheet_data)
-                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
-
-                            sheet = writer.sheets[month_name[:31]]
-                            add_summary(sheet, summary_data, start_col=9)
-
-                            apply_styles(sheet)
-
-                with open(output_file, "rb") as file:
-                    st.download_button(
-                        label="Download Auswertung",
-                        data=file,
-                        file_name="touren_auswertung_korrekt.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            except Exception as e:
-                st.error(f"Fehler beim Exportieren der Datei: {e}")
-
 
 if __name__ == "__main__":
     main()
