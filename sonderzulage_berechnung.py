@@ -128,11 +128,7 @@ def apply_styles(sheet):
                 # Versuche direkte Zuordnung
                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
 
-                # Debugging in Streamlit ausgeben
-                st.info(f"DEBUG: Nachname: '{nachname}', Vorname: '{vorname}', Personalnummer: '{personalnummer}'")
-            except ValueError:
-                personalnummer = "Unbekannt"
-                st.warning(f"DEBUG: Fehler beim Parsen des Namens: '{first_cell_value}'")
+                
 
             # Verbinden der Namenszeile über alle Spalten
             sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
