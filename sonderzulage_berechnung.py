@@ -90,6 +90,9 @@ name_to_personalnummer = {
 
 
 def apply_styles(sheet):
+    """
+    Formatierung für die Hauptdaten im Sheet.
+    """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
@@ -151,21 +154,26 @@ def apply_styles(sheet):
 
     sheet.row_dimensions[1].hidden = True
 
+
 def add_summary(sheet, summary_data, start_col=9):
     """
     Fügt eine Zusammenfassungstabelle (Name, Personalnummer, Gesamtverdienst) in das Sheet ein.
+    Die Zusammenfassung wird ohne spezielle Formatierungen eingefügt.
     """
-    header_row = 1
-    sheet.cell(row=header_row, column=start_col, value="Zusammenfassung")
-    sheet.cell(row=header_row + 1, column=start_col, value="Name")
-    sheet.cell(row=header_row + 1, column=start_col + 1, value="Personalnummer")
-    sheet.cell(row=header_row + 1, column=start_col + 2, value="Gesamtverdienst (€)")
+    # Überschriften für die Zusammenfassung
+    sheet.cell(row=1, column=start_col, value="Zusammenfassung")
+    sheet.cell(row=2, column=start_col, value="Name")
+    sheet.cell(row=2, column=start_col + 1, value="Personalnummer")
+    sheet.cell(row=2, column=start_col + 2, value="Gesamtverdienst (€)")
 
-    for idx, (name, personalnummer, total) in enumerate(summary_data, start=header_row + 2):
-        sheet.cell(row=idx, column=start_col, value=name)
-        sheet.cell(row=idx, column=start_col + 1, value=personalnummer)
-        sheet.cell(row=idx, column=start_col + 2, value=total)
+    # Einfügen der Zusammenfassungsdaten
+    for idx, (name, personalnummer, total) in enumerate(summary_data, start=3):
+        sheet.cell(row=idx, column=start_col, value=name)  # Name
+        sheet.cell(row=idx, column=start_col + 1, value=personalnummer)  # Personalnummer
+        sheet.cell(row=idx, column=start_col + 2, value=total)  # Gesamtverdienst
+        # Gesamtverdienst-Zelle als Zahl formatieren
         sheet.cell(row=idx, column=start_col + 2).number_format = '#,##0.00 €'
+
 
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
@@ -250,11 +258,6 @@ def main():
                             sheet = writer.sheets[month_name[:31]]
                             add_summary(sheet, summary_data, start_col=9)
 
-                            for col in sheet.columns:
-                                values = [str(cell.value) for cell in col if cell.value]
-                                max_length = max(len(value) for value in values) if values else 10
-                                col_letter = get_column_letter(col[0].column)
-                                sheet.column_dimensions[col_letter].width = max_length + 2
                             apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
