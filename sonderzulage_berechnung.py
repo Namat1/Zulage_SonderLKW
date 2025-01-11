@@ -123,11 +123,27 @@ def apply_styles(sheet):
             try:
                 # Hole Nachnamen und Vornamen, bereinige Leerzeichen und Sonderzeichen
                 nachname, vorname = first_cell_value.split(" ", 1)
-                nachname = nachname.strip().capitalize()
-                vorname = vorname.strip().capitalize()
-                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                nachname = nachname.strip().lower().capitalize()
+                vorname = vorname.strip().lower().capitalize()
+
+                # Debugging: Originalwerte ausgeben
+                print(f"DEBUG: Originalwert: '{first_cell_value}', Nachname: '{nachname}', Vorname: '{vorname}'")
+
+                # Versuche direkte und bereinigte Zuordnung
+                import re
+                nachname_cleaned = re.sub(r"[^a-zA-Z]", "", nachname)
+                vorname_cleaned = re.sub(r"[^a-zA-Z]", "", vorname)
+
+                personalnummer = (
+                    name_to_personalnummer.get(nachname, {}).get(vorname)
+                    or name_to_personalnummer.get(nachname_cleaned, {}).get(vorname_cleaned, "Unbekannt")
+                )
+
+                # Debugging: Personalnummer prüfen
+                print(f"DEBUG: Personalnummer für '{nachname} {vorname}': {personalnummer}")
             except ValueError:
                 personalnummer = "Unbekannt"
+                print(f"DEBUG: Fehler beim Parsen des Namens: '{first_cell_value}'")
 
             # Verbinden der Namenszeile über alle Spalten
             sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
