@@ -14,7 +14,7 @@ def apply_styles(sheet):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="B7CCE2", end_color="B7CCE2", fill_type="solid")  # Blau für Namenszeilen
+    name_fill = PatternFill(start_color="2E64FE", end_color="#2E64FE", fill_type="solid")  # Blau für Namenszeilen
     header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")  # Grau für Kopfzeilen
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
 
