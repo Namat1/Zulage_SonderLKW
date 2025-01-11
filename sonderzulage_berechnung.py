@@ -109,6 +109,9 @@ def apply_styles(sheet):
     for row_idx, row in enumerate(sheet.iter_rows(), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
+        if row_idx == 1 and "Datum" not in first_cell_value:  # Überspringe ungültige erste Zeile
+            continue
+
         if "Gesamtverdienst" in first_cell_value:  # Gesamtverdienstzeilen
             for cell in row:
                 cell.fill = total_fill
@@ -166,113 +169,51 @@ def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
 
     uploaded_file = st.file_uploader("Lade eine Excel-Datei hoch", type=["xlsx"])
-if uploaded_file:
-    df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-    st.write("Überprüfe hochgeladene Daten:")
-    st.write(df.head())
+    if uploaded_file:
+        df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+        st.write("Überprüfe hochgeladene Daten:")
+        st.write(df.head())  # Debugging: Zeigt die ersten Zeilen der Datei an
 
-    # Entferne leere Zeilen und prüfe den Header
-    df = df.dropna(how="all")
-    if "Datum" not in df.columns:
-        st.error("Ungültige Datei. Spalte 'Datum' fehlt!")
-        st.stop()
+        # Entferne komplett leere Zeilen
+        df = df.dropna(how="all")
+        sheet_data = []
 
-    # Verarbeitung der Daten
-    for _, row in df.iterrows():
-        if pd.isnull(row["Datum"]):
-            continue  # Ignoriere Zeilen ohne Datum
+        # Verarbeite die Daten
+        for _, row in df.iterrows():
+            if pd.isnull(row["Datum"]):  # Ignoriere Zeilen ohne Datum
+                continue
 
-        # Verarbeite nur relevante Zeilen
-        sheet_data.append([row["Datum"], row["Tour"], row["LKW"], row["Art"], row["Verdienst"]])
+            # Verarbeite nur relevante Zeilen
+            sheet_data.append([
+                row["Datum"].strftime("%d.%m.%Y"),
+                row["Tour"],
+                row["LKW"],
+                row["Art"],
+                row["Verdienst"]
+            ])
 
+        output_file = "touren_auswertung_korrekt.xlsx"
+        try:
+            with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+                workbook = writer.book
+                sheet = workbook.active
 
-    if uploaded_files:
-        all_data = pd.DataFrame()  # DataFrame zur Speicherung aller Daten
+                # Füge Daten in das Sheet ein
+                for data_row in sheet_data:
+                    sheet.append(data_row)
 
-        for uploaded_file in uploaded_files:
-            try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-                if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
-                    continue
+                # Wende Formatierungen an
+                apply_styles(sheet)
 
-                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-                extracted_data = filtered_df.iloc[:, columns_to_extract]
-                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-
-                def calculate_earnings(row):
-                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    earnings = 0
-                    for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
-                    return earnings
-
-                extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = extracted_data["Datum"].dt.month
-                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
-                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
-
-            except Exception as e:
-                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
-
-        if not all_data.empty:
-            output_file = "touren_auswertung_korrekt.xlsx"
-            try:
-                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
-
-                    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                        if not month_data.empty:
-                            month_name_german = {
-                                "January": "Januar", "February": "Februar", "March": "März", "April": "April",
-                                "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
-                                "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
-                            }
-                            month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
-
-                            sheet_data = []
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y"),
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
-                                    ])
-                                total_earnings = group["Verdienst"].sum()
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
-
-                            sheet_df = pd.DataFrame(sheet_data)
-                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
-
-                    workbook = writer.book
-                    for sheet_name in workbook.sheetnames:
-                        sheet = workbook[sheet_name]
-                        for col in sheet.columns:
-                            max_length = max(len(str(cell.value)) for cell in col if cell.value)
-                            col_letter = get_column_letter(col[0].column)
-                            sheet.column_dimensions[col_letter].width = max_length + 2
-                        apply_styles(sheet)
-
-                with open(output_file, "rb") as file:
-                    st.download_button(
-                        label="Download Auswertung",
-                        data=file,
-                        file_name="touren_auswertung_korrekt.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            except Exception as e:
-                st.error(f"Fehler beim Exportieren der Datei: {e}")
+            with open(output_file, "rb") as file:
+                st.download_button(
+                    label="Download Auswertung",
+                    data=file,
+                    file_name="touren_auswertung_korrekt.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        except Exception as e:
+            st.error(f"Fehler beim Exportieren der Datei: {e}")
 
 
 if __name__ == "__main__":
