@@ -239,4 +239,22 @@ def main():
                     workbook = writer.book
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
-                        for col
+                        for col in sheet.columns:
+                            max_length = max(len(str(cell.value)) for cell in col if cell.value)
+                            col_letter = get_column_letter(col[0].column)
+                            sheet.column_dimensions[col_letter].width = max_length + 2
+                        apply_styles(sheet)
+
+                with open(output_file, "rb") as file:
+                    st.download_button(
+                        label="Download Auswertung",
+                        data=file,
+                        file_name="touren_auswertung_korrekt.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            except Exception as e:
+                st.error(f"Fehler beim Exportieren der Datei: {e}")
+
+
+if __name__ == "__main__":
+    main()
