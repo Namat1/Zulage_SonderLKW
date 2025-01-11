@@ -91,7 +91,7 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Formatierung für die Hauptdaten im Sheet.
+    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -102,7 +102,7 @@ def apply_styles(sheet):
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
-    for row_idx, row in enumerate(sheet.iter_rows(), start=1):
+    for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
         if "Gesamtverdienst" in first_cell_value:
@@ -133,7 +133,7 @@ def apply_styles(sheet):
             row[0].fill = name_fill
             row[0].font = Font(bold=True)
             row[0].alignment = Alignment(horizontal="center")
-            for cell_idx, cell in enumerate(row, start=1):
+            for cell in row:
                 cell.border = thin_border
 
         elif "Datum" in first_cell_value:
@@ -153,6 +153,7 @@ def apply_styles(sheet):
                     cell.number_format = '#,##0.00 €'
 
     sheet.row_dimensions[1].hidden = True
+
 
 def add_summary(sheet, summary_data, start_col=9):
     """
