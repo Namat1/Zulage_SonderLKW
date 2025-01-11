@@ -119,47 +119,37 @@ def apply_styles(sheet):
                     cell.number_format = '#,##0.00 €'
 
         elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
-    try:
-        # Hole Vorname und Nachname, speichere Originalwerte
-        vorname, nachname = first_cell_value.split(" ", 1)
-        original_vorname, original_nachname = vorname, nachname
+            try:
+                vorname, nachname = first_cell_value.split(" ", 1)
+                vorname = "".join(vorname.strip().split()).title()
+                nachname = "".join(nachname.strip().split()).title()
 
-        # Bereinige Vor- und Nachnamen
-        vorname = "".join(vorname.strip().split()).title()
-        nachname = "".join(nachname.strip().split()).title()
+                # Versuche direkte Zuordnung und alternative Schreibweisen
+                personalnummer = (
+                    name_to_personalnummer.get(nachname, {}).get(vorname)
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))  # Ohne Bindestrich
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))  # Mit Bindestrich
+                    or "Unbekannt"
+                )
 
-        # Versuche direkte Zuordnung und alternative Schreibweisen
-        personalnummer = (
-            name_to_personalnummer.get(nachname, {}).get(vorname)
-            or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))  # Ohne Bindestrich
-            or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))  # Mit Bindestrich
-            or "Unbekannt"
-        )
+            except ValueError:
+                personalnummer = "Unbekannt"
 
-        # Prüfe, ob das Matching fehlschlägt
-        if personalnummer == "Unbekannt":
-            st.warning(f"Keine Personalnummer für '{original_vorname} {original_nachname}' gefunden. "
-                       f"(Bereinigt: {vorname} {nachname})")
-
-    except ValueError:
-        personalnummer = "Unbekannt"
-
-    # Verbinden der Namenszeile über alle Spalten
-    sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-    row[0].value = f"{first_cell_value} - {personalnummer}"  # Füge Personalnummer hinzu
-    row[0].fill = name_fill
-    row[0].font = Font(bold=True)
-    row[0].alignment = Alignment(horizontal="center")
-    row[0].border = thin_border
-    for cell in row[1:]:
-        cell.value = None  # Leere Zellen hinter dem Namen
-
+            # Verbinden der Namenszeile über alle Spalten
+            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+            row[0].value = f"{first_cell_value} - {personalnummer}"  # Füge Personalnummer hinzu
+            row[0].fill = name_fill
+            row[0].font = Font(bold=True)
+            row[0].alignment = Alignment(horizontal="center")
+            row[0].border = thin_border
+            for cell in row[1:]:
+                cell.value = None  # Leere Zellen hinter dem Namen
 
         elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
+                cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
 
         else:  # Datenzeilen
@@ -170,6 +160,7 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
+
 
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
@@ -248,22 +239,4 @@ def main():
                     workbook = writer.book
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
-                        for col in sheet.columns:
-                            max_length = max(len(str(cell.value)) for cell in col if cell.value)
-                            col_letter = get_column_letter(col[0].column)
-                            sheet.column_dimensions[col_letter].width = max_length + 2
-                        apply_styles(sheet)
-
-                with open(output_file, "rb") as file:
-                    st.download_button(
-                        label="Download Auswertung",
-                        data=file,
-                        file_name="touren_auswertung_korrekt.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            except Exception as e:
-                st.error(f"Fehler beim Exportieren der Datei: {e}")
-
-
-if __name__ == "__main__":
-    main()
+                        for col
