@@ -273,10 +273,19 @@ def main():
                     workbook = writer.book
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
-                        for col in sheet.columns:
-                            max_length = max(len(str(cell.value)) for cell in col if cell.value)
-                            col_letter = get_column_letter(col[0].column)
-                            sheet.column_dimensions[col_letter].width = max_length + 2
+                    for col in sheet.columns:
+                        # Finde alle Werte in der Spalte
+                        values = [str(cell.value) for cell in col if cell.value]
+    
+                        # Prüfe, ob Werte existieren
+                        if values:
+                            max_length = max(len(value) for value in values)
+                        else:
+                            max_length = 10  # Standardbreite, falls Spalte leer ist
+    
+                        col_letter = get_column_letter(col[0].column)
+                        sheet.column_dimensions[col_letter].width = max_length + 2
+
                         apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
