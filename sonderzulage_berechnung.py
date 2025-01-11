@@ -7,46 +7,42 @@ from openpyxl.utils import get_column_letter
 
 def apply_styles(sheet):
     """
-    Dynamische Anwendung eines Business-Stils mit besserer Unterscheidung zwischen Fahrern.
+    Anwendung eines klaren und übersichtlichen Business-Stils:
+    - Namenszeilen: Blau, fett.
+    - Datum-/Kopfzeilen: Hellgrau, fett.
+    - Datenzeilen: Weiß, standard.
+    - Trennung zwischen Fahrern durch leere Zeilen.
     """
     # Stildefinitionen
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill_odd = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für ungerade Fahrer
-    name_fill_even = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")  # Hellgrün für gerade Fahrer
+    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Blau für Namenszeilen
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Datum-/Kopfzeilen
-    data_fill_odd = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für Datenzeilen (ungerade Fahrer)
-    data_fill_even = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")  # Hellgrün für Datenzeilen (gerade Fahrer)
+    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
 
-    # Fahrer-Trennungslogik
-    is_odd = True  # Start mit ungeraden Fahrern
     for row_idx, row in enumerate(sheet.iter_rows(), start=1):
         if row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
-            # Anwenden der Farbe basierend auf "ungerade" oder "gerade" Fahrer
-            fill = name_fill_odd if is_odd else name_fill_even
             for cell in row:
-                cell.fill = fill
+                cell.fill = name_fill
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
-            is_odd = not is_odd  # Toggle für den nächsten Fahrer
         elif "Datum" in str(row[0].value):  # Kopfzeilen mit "Datum"
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
+        elif all(cell.value is None for cell in row):  # Leere Trennzeilen
+            continue  # Keine Formatierung für leere Zeilen
         else:  # Datenzeilen
-            # Anwenden der Farbe basierend auf "ungerade" oder "gerade" Fahrer
-            fill = data_fill_odd if is_odd else data_fill_even
             for cell in row:
-                cell.fill = fill
+                cell.fill = data_fill
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="left")
                 cell.border = thin_border
-
 
 
 def main():
