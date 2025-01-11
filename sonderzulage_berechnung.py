@@ -94,10 +94,11 @@ name_to_personalnummer = {
 def apply_styles(sheet):
     """
     Dynamische Anwendung eines klaren und übersichtlichen Business-Stils:
-    - Namenszeilen: Hellblau, fett, verbunden, mit Personalnummer.
+    - Namenszeilen: Hellblau, fett, verbunden, mit Personalnummer, mit Grid.
     - Kopfzeilen (Überschriften): Hellgrau, fett.
     - Gesamtverdienstzeilen: Hellgrün, fett.
     - Datenzeilen: Weiß, normal.
+    - Leerzeilen: Kein Grid.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -143,9 +144,12 @@ def apply_styles(sheet):
             row[0].fill = name_fill
             row[0].font = Font(bold=True)
             row[0].alignment = Alignment(horizontal="center")
-            row[0].border = thin_border
+            row[0].border = thin_border  # Grid für Namenszeile hinzufügen
+
+            # Leere Zellen hinter dem Namen ohne Grid
             for cell in row[1:]:
-                cell.value = None  # Leere Zellen hinter dem Namen
+                cell.value = None
+                cell.border = None  # Entferne Grid von leeren Zellen
 
         elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
             for cell in row:
@@ -162,6 +166,7 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
+
 
     # Blende die erste Zeile aus
     sheet.row_dimensions[1].hidden = True
