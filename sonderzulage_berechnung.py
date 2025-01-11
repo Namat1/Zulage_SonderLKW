@@ -155,7 +155,7 @@ def apply_styles(sheet):
 
     # Automatische Spaltenbreitenanpassung für alle Spalten
     for col in sheet.columns:
-        max_length = max(len(str(cell.value) or "") for cell in col)
+        max_length = max(len(str(cell.value) or "") for cell in col) + 1  # Platz für Zeichen hinzufügen
         col_letter = get_column_letter(col[0].column)
         sheet.column_dimensions[col_letter].width = max_length
 
