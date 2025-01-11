@@ -119,24 +119,41 @@ def apply_styles(sheet):
                     cell.number_format = '#,##0.00 €'
 
         elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
-            try:
-                vorname, nachname = first_cell_value.split(" ", 1)
-                nachname = nachname.strip().capitalize()
-                vorname = vorname.strip().capitalize()
+    try:
+        # Hole Vorname und Nachname, speichere Originalwerte
+        vorname, nachname = first_cell_value.split(" ", 1)
+        original_vorname, original_nachname = vorname, nachname
 
-                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+        # Bereinige Vor- und Nachnamen
+        vorname = "".join(vorname.strip().split()).title()
+        nachname = "".join(nachname.strip().split()).title()
 
-            except ValueError:
-                personalnummer = "Unbekannt"
+        # Versuche direkte Zuordnung und alternative Schreibweisen
+        personalnummer = (
+            name_to_personalnummer.get(nachname, {}).get(vorname)
+            or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))  # Ohne Bindestrich
+            or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))  # Mit Bindestrich
+            or "Unbekannt"
+        )
 
-            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-            row[0].value = f"{first_cell_value} - {personalnummer}"  # Füge Personalnummer hinzu
-            row[0].fill = name_fill
-            row[0].font = Font(bold=True)
-            row[0].alignment = Alignment(horizontal="center")
-            row[0].border = thin_border
-            for cell in row[1:]:
-                cell.value = None  # Leere Zellen hinter dem Namen
+        # Prüfe, ob das Matching fehlschlägt
+        if personalnummer == "Unbekannt":
+            st.warning(f"Keine Personalnummer für '{original_vorname} {original_nachname}' gefunden. "
+                       f"(Bereinigt: {vorname} {nachname})")
+
+    except ValueError:
+        personalnummer = "Unbekannt"
+
+    # Verbinden der Namenszeile über alle Spalten
+    sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+    row[0].value = f"{first_cell_value} - {personalnummer}"  # Füge Personalnummer hinzu
+    row[0].fill = name_fill
+    row[0].font = Font(bold=True)
+    row[0].alignment = Alignment(horizontal="center")
+    row[0].border = thin_border
+    for cell in row[1:]:
+        cell.value = None  # Leere Zellen hinter dem Namen
+
 
         elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
             for cell in row:
