@@ -91,15 +91,79 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Formatiert das Sheet mit Zellenstilen.
+    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E, 
+    und automatische Anpassung der Spaltenbreite mit +1 für alle Spalten außer A.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
+    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
+    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+
+    for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
+        first_cell_value = str(row[0].value).strip() if row[0].value else ""
+
+        if "Gesamtverdienst" in first_cell_value:
+            for cell in row:
+                cell.fill = total_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="right")
+                cell.border = thin_border
+                if cell.column == 5 and isinstance(cell.value, (int, float)):
+                    cell.number_format = '#,##0.00 €'
+
+        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
+            try:
+                vorname, nachname = first_cell_value.split(" ", 1)
+                vorname = "".join(vorname.strip().split()).title()
+                nachname = "".join(nachname.strip().split()).title()
+                personalnummer = (
+                    name_to_personalnummer.get(nachname, {}).get(vorname)
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))
+                    or "Unbekannt"
+                )
+            except ValueError:
+                personalnummer = "Unbekannt"
+
+            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+            row[0].value = f"{first_cell_value} - {personalnummer}"
+            row[0].fill = name_fill
+            row[0].font = Font(bold=True)
+            row[0].alignment = Alignment(horizontal="center")
+            for cell in row:
+                cell.border = thin_border
+
+        elif "Datum" in first_cell_value:
+            for cell in row:
+                cell.fill = header_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="right")
+                cell.border = thin_border
+
+        else:
+            for cell in row:
+                cell.fill = data_fill
+                cell.font = Font(bold=False)
+                cell.alignment = Alignment(horizontal="right")
+                cell.border = thin_border
+                if cell.column == 5 and isinstance(cell.value, (int, float)):
+                    cell.number_format = '#,##0.00 €'
+
+    # Automatische Spaltenbreitenanpassung für alle Spalten
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
-        sheet.column_dimensions[get_column_letter(col[0].column)].width = max_length + 1
+        col_letter = get_column_letter(col[0].column)
+        if col_letter == "A":
+            sheet.column_dimensions[col_letter].width = 17  # Feste Breite für Spalte A
+        else:
+            sheet.column_dimensions[col_letter].width = max_length + 1  # +1 für alle anderen Spalten
+
+    # Erste Zeile ausblenden
+    sheet.row_dimensions[1].hidden = True
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
