@@ -172,7 +172,7 @@ def apply_styles(sheet):
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle (Name, Personalnummer, Gesamtverdienst) in das Sheet ein.
-    Fügt eine Kopfzeile "Auszahlung Monat" über der Zusammenfassung hinzu.
+    Fügt eine Kopfzeile "Auszahlung Monat: <Monat>" in Zeile 2 hinzu.
     """
     # Überschriften für die Zusammenfassung
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
@@ -181,28 +181,28 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         top=Side(style='thin'), bottom=Side(style='thin')
     )
 
-    # Auszahlung Monat
-    auszahlung_cell = sheet.cell(row=1, column=start_col, value=f"Auszahlung Monat: {month_name}")
-    sheet.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=start_col + 2)
+    # Auszahlung Monat in Zeile 2
+    auszahlung_cell = sheet.cell(row=2, column=start_col, value=f"Auszahlung Monat: {month_name}")
+    sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
     auszahlung_cell.font = Font(bold=True, size=12)
     auszahlung_cell.alignment = Alignment(horizontal="center", vertical="center")
     auszahlung_cell.fill = header_fill
     auszahlung_cell.border = thin_border
 
-    # Kopfzeile der Zusammenfassung
-    sheet.cell(row=2, column=start_col, value="Name")
-    sheet.cell(row=2, column=start_col + 1, value="Personalnummer")
-    sheet.cell(row=2, column=start_col + 2, value="Gesamtverdienst (€)")
+    # Kopfzeile der Zusammenfassung in Zeile 3
+    sheet.cell(row=3, column=start_col, value="Name")
+    sheet.cell(row=3, column=start_col + 1, value="Personalnummer")
+    sheet.cell(row=3, column=start_col + 2, value="Gesamtverdienst (€)")
 
     for col in range(start_col, start_col + 3):
-        header_cell = sheet.cell(row=2, column=col)
+        header_cell = sheet.cell(row=3, column=col)
         header_cell.font = Font(bold=True)
         header_cell.fill = header_fill
         header_cell.alignment = Alignment(horizontal="center", vertical="center")
         header_cell.border = thin_border
 
-    # Einfügen der Zusammenfassungsdaten
-    for idx, (name, personalnummer, total) in enumerate(summary_data, start=3):
+    # Einfügen der Zusammenfassungsdaten ab Zeile 4
+    for idx, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=idx, column=start_col, value=name).border = thin_border
         sheet.cell(row=idx, column=start_col + 1, value=personalnummer).border = thin_border
         total_cell = sheet.cell(row=idx, column=start_col + 2, value=total)
@@ -212,9 +212,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     # Spaltenbreite automatisch anpassen
     for col in range(start_col, start_col + 3):
         max_length = max(
-            len(str(sheet.cell(row=row, column=col).value) or "") for row in range(1, len(summary_data) + 3)
+            len(str(sheet.cell(row=row, column=col).value) or "") for row in range(2, len(summary_data) + 4)
         )
         sheet.column_dimensions[get_column_letter(col)].width = max_length + 1
+
 
 
 
