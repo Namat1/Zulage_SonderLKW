@@ -90,89 +90,82 @@ name_to_personalnummer = {
 
 
 def apply_styles(sheet):
-    """
-    Dynamische Anwendung eines klaren und übersichtlichen Business-Stils:
-    - Namenszeilen: Hellblau, fett, verbunden, mit Personalnummer, mit Grid.
-    - Kopfzeilen (Überschriften): Hellgrau, fett.
-    - Gesamtverdienstzeilen: Hellgrün, fett.
-    - Datenzeilen: Weiß, normal.
-    """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für Namenszeilen
-    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Kopfzeilen
-    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")  # Hellgrün für Gesamtverdienstzeilen
-    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
+    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
+    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
     for row_idx, row in enumerate(sheet.iter_rows(), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        if "Gesamtverdienst" in first_cell_value:  # Gesamtverdienstzeilen
+        if "Gesamtverdienst" in first_cell_value:
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
+                if cell.column == 5 and isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0.00 €'
 
-        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
+        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
             try:
                 vorname, nachname = first_cell_value.split(" ", 1)
                 vorname = "".join(vorname.strip().split()).title()
                 nachname = "".join(nachname.strip().split()).title()
-
-                # Versuche direkte Zuordnung und alternative Schreibweisen
                 personalnummer = (
                     name_to_personalnummer.get(nachname, {}).get(vorname)
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))  # Ohne Bindestrich
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))  # Mit Bindestrich
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))
                     or "Unbekannt"
                 )
-
             except ValueError:
                 personalnummer = "Unbekannt"
 
-            # Verbinden der Namenszeile über alle Spalten
             sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-            row[0].value = f"{first_cell_value} - {personalnummer}"  # Füge Personalnummer hinzu
+            row[0].value = f"{first_cell_value} - {personalnummer}"
             row[0].fill = name_fill
             row[0].font = Font(bold=True)
             row[0].alignment = Alignment(horizontal="center")
-
-            # Setze Borders für alle zusammengeführten Zellen
             for cell_idx, cell in enumerate(row, start=1):
-                if cell_idx == 5:  # Rechte Kante der letzten zusammengeführten Zelle
-                    cell.border = Border(
-                        left=thin_border.left,
-                        right=thin_border.right,  # Rechte Kante explizit setzen
-                        top=thin_border.top,
-                        bottom=thin_border.bottom,
-                    )
-                else:  # Andere Zellen in der Namenszeile
-                    cell.border = thin_border
+                cell.border = thin_border
 
-        elif "Datum" in first_cell_value:  # Kopfzeilen (Überschriften)
+        elif "Datum" in first_cell_value:
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
 
-        else:  # Datenzeilen
+        else:
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
+                if cell.column == 5 and isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0.00 €'
 
-    # Blende die erste Zeile aus
     sheet.row_dimensions[1].hidden = True
 
+def add_summary(sheet, summary_data, start_col=9):
+    """
+    Fügt eine Zusammenfassungstabelle (Name, Personalnummer, Gesamtverdienst) in das Sheet ein.
+    """
+    header_row = 1
+    sheet.cell(row=header_row, column=start_col, value="Zusammenfassung")
+    sheet.cell(row=header_row + 1, column=start_col, value="Name")
+    sheet.cell(row=header_row + 1, column=start_col + 1, value="Personalnummer")
+    sheet.cell(row=header_row + 1, column=start_col + 2, value="Gesamtverdienst (€)")
+
+    for idx, (name, personalnummer, total) in enumerate(summary_data, start=header_row + 2):
+        sheet.cell(row=idx, column=start_col, value=name)
+        sheet.cell(row=idx, column=start_col + 1, value=personalnummer)
+        sheet.cell(row=idx, column=start_col + 2, value=total)
+        sheet.cell(row=idx, column=start_col + 2).number_format = '#,##0.00 €'
 
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
@@ -180,7 +173,7 @@ def main():
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
     if uploaded_files:
-        all_data = pd.DataFrame()  # DataFrame zur Speicherung aller Daten
+        all_data = pd.DataFrame()
 
         for uploaded_file in uploaded_files:
             try:
@@ -230,9 +223,15 @@ def main():
                             month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
 
                             sheet_data = []
+                            summary_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 total_earnings = group["Verdienst"].sum()
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", total_earnings])
+                                personalnummer = (
+                                    name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                                )
+                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
+
+                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
@@ -248,15 +247,15 @@ def main():
                             sheet_df = pd.DataFrame(sheet_data)
                             sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
 
-                    workbook = writer.book
-                    for sheet_name in workbook.sheetnames:
-                        sheet = workbook[sheet_name]
-                        for col in sheet.columns:
-                            values = [str(cell.value) for cell in col if cell.value]
-                            max_length = max(len(value) for value in values) if values else 10
-                            col_letter = get_column_letter(col[0].column)
-                            sheet.column_dimensions[col_letter].width = max_length + 2
-                        apply_styles(sheet)
+                            sheet = writer.sheets[month_name[:31]]
+                            add_summary(sheet, summary_data, start_col=9)
+
+                            for col in sheet.columns:
+                                values = [str(cell.value) for cell in col if cell.value]
+                                max_length = max(len(value) for value in values) if values else 10
+                                col_letter = get_column_letter(col[0].column)
+                                sheet.column_dimensions[col_letter].width = max_length + 2
+                            apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
                     st.download_button(
