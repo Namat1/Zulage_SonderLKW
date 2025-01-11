@@ -165,7 +165,26 @@ def apply_styles(sheet):
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
 
-    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
+    uploaded_file = st.file_uploader("Lade eine Excel-Datei hoch", type=["xlsx"])
+if uploaded_file:
+    df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+    st.write("Überprüfe hochgeladene Daten:")
+    st.write(df.head())
+
+    # Entferne leere Zeilen und prüfe den Header
+    df = df.dropna(how="all")
+    if "Datum" not in df.columns:
+        st.error("Ungültige Datei. Spalte 'Datum' fehlt!")
+        st.stop()
+
+    # Verarbeitung der Daten
+    for _, row in df.iterrows():
+        if pd.isnull(row["Datum"]):
+            continue  # Ignoriere Zeilen ohne Datum
+
+        # Verarbeite nur relevante Zeilen
+        sheet_data.append([row["Datum"], row["Tour"], row["LKW"], row["Art"], row["Verdienst"]])
+
 
     if uploaded_files:
         all_data = pd.DataFrame()  # DataFrame zur Speicherung aller Daten
