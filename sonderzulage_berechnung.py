@@ -168,7 +168,7 @@ def apply_styles(sheet):
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive Gesamtsumme aller Verdienste,
-    ohne grüne Dreiecke bei den Personalnummern.
+    und behandelt Personalnummern korrekt, ohne grüne Dreiecke.
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
@@ -199,9 +199,9 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=i, column=start_col, value=name).border = thin_border
 
-        # Personalnummer korrekt speichern und grüne Dreiecke verhindern
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
-        personalnummer_cell.number_format = '0'  # Standard-Zahlenformat, damit Excel sie als Zahl interpretiert
+        # Personalnummer als reinen Text behandeln (grüne Dreiecke verhindern)
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=str(personalnummer))
+        personalnummer_cell.number_format = '@'  # '@' steht für "Textformat" in Excel
         personalnummer_cell.border = thin_border
 
         # Gesamtverdienst mit Währungsformat
