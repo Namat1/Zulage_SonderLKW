@@ -248,7 +248,18 @@ def main():
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
                 if not filtered_df.empty:
+                    # Debugging: Vorhandene Spalten anzeigen
+                st.write("Vorhandene Spalten:", df.columns)
+
+                # Überprüfen, ob die Spalte 'Datum' existiert
+                if "Datum" in df.columns:
+                    filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], format="%d.%m.%Y", errors="coerce")
+                elif 14 < len(df.columns):  # Zugriff über Index als Fallback
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+                else:
+                    st.error("Die Spalte 'Datum' wurde in der Datei nicht gefunden.")
+                    return
+    
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
@@ -257,23 +268,7 @@ def main():
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                # Debugging: Inhalt der Spalte 'Datum' anzeigen
-                st.write("Inhalt der Spalte 'Datum':", extracted_data.iloc[:, 14].head(10))
-                
-                # Sicherstellen, dass 'Datum' als datetime erkannt wird
-                extracted_data["Datum"] = pd.to_datetime(extracted_data.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
-                
-                # Überprüfen auf ungültige Werte
-                if extracted_data["Datum"].isnull().any():
-                    st.warning("Einige Zeilen haben ungültige Datumswerte und werden ignoriert.")
-                extracted_data = extracted_data.dropna(subset=["Datum"])
-                
-                # Hinzufügen von Wochentag und KW
-                extracted_data["Wochentag"] = extracted_data["Datum"].dt.strftime("%A")
-                extracted_data["KW"] = extracted_data["Datum"].dt.isocalendar().week
-                
-                # Datum mit Wochentag und KW kombinieren
-                extracted_data["Datum"] = extracted_data["Datum"].dt.strftime("%d.%m.%Y") + " (" +                                           extracted_data["Wochentag"] + ", KW" +                                           extracted_data["KW"].astype(str) + ")" 
+                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
