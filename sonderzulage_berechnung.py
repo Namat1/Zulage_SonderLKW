@@ -184,7 +184,8 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     )
 
     # Auszahlung Monat in Zeile 2
-    auszahlung_cell = sheet.cell(row=2, column=start_col, value=f"Auszahlung Monat: {month_name}")
+    auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat:"
+    auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
     sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
     auszahlung_cell.font = Font(bold=True, size=12)
     auszahlung_cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -211,12 +212,13 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         total_cell.border = thin_border
         total_cell.number_format = '#,##0.00 €'  # Währungsformat
 
-    # Spaltenbreite automatisch anpassen
+    # Automatische Spaltenbreite
     for col in range(start_col, start_col + 3):
         max_length = max(
             len(str(sheet.cell(row=row, column=col).value) or "") for row in range(2, len(summary_data) + 4)
         )
         sheet.column_dimensions[get_column_letter(col)].width = max_length + 1
+
 
 
 def main():
