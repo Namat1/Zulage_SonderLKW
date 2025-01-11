@@ -34,7 +34,8 @@ def apply_styles(sheet):
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
 
-        elif first_cell_value and first_cell_value.split(" ")[0].isalpha() and not "Datum" in first_cell_value:  # Namenszeilen
+        # Bedingung für Namenszeilen: Erlaubt alphanumerische Zeichen und Sonderzeichen wie Bindestrich
+        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True)
@@ -54,6 +55,7 @@ def apply_styles(sheet):
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="left")
                 cell.border = thin_border
+
 
 
 
