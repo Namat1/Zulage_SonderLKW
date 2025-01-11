@@ -172,6 +172,7 @@ def apply_styles(sheet):
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
 
+
         elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
             try:
                 vorname, nachname = first_cell_value.split(" ", 1)
