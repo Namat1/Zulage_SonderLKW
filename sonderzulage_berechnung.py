@@ -258,9 +258,9 @@ def main():
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-    extracted_data["Wochentag"] = extracted_data["Datum"].dt.strftime("%A")
-    extracted_data["KW"] = extracted_data["Datum"].dt.isocalendar().week
-    extracted_data["Datum"] = extracted_data["Datum"].dt.strftime("%d.%m.%Y") + " (" +                               extracted_data["Wochentag"] + ", KW" +                               extracted_data["KW"].astype(str) + ")" 
+                extracted_data["Wochentag"] = extracted_data["Datum"].dt.strftime("%A")
+                extracted_data["KW"] = extracted_data["Datum"].dt.isocalendar().week
+                extracted_data["Datum"] = extracted_data["Datum"].dt.strftime("%d.%m.%Y") + " (" +                                           extracted_data["Wochentag"] + ", KW" +                                           extracted_data["KW"].astype(str) + ")" 
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
@@ -331,7 +331,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="Zulage_Sonderfahrzeuge.xlsx",
+                        file_name="touren_auswertung_korrekt.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
