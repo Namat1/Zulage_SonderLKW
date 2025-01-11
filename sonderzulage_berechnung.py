@@ -91,7 +91,8 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E.
+    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E, 
+    und automatische Anpassung der Spaltenbreite für alle Spalten.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -152,7 +153,15 @@ def apply_styles(sheet):
                 if cell.column == 5 and isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0.00 €'
 
+    # Automatische Spaltenbreitenanpassung für alle Spalten
+    for col in sheet.columns:
+        max_length = max(len(str(cell.value) or "") for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        sheet.column_dimensions[col_letter].width = max_length + 2
+
+    # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
+
 
 
 def add_summary(sheet, summary_data, start_col=9):
