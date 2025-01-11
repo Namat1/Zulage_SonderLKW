@@ -157,10 +157,11 @@ def apply_styles(sheet):
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        sheet.column_dimensions[col_letter].width = max_length + 2
+        sheet.column_dimensions[col_letter].width = max_length
 
     # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
+
 
 
 
