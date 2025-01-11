@@ -167,8 +167,8 @@ def apply_styles(sheet):
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive Gesamtsumme aller Verdienste,
-    und stellt die Personalnummern als Zahlen dar (mit führenden Nullen).
+    Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive vollständigem Grid (auch für leere Zellen)
+    und stellt Personalnummern als Zahlen mit führenden Nullen dar.
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
@@ -195,39 +195,52 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = thin_border
 
+    # Maximale Zeilen- und Spaltenanzahl bestimmen
+    max_rows = len(summary_data) + 4  # Header + Daten + Gesamtverdienst
+    max_cols = start_col + 2          # Name, Personalnummer, Gesamtverdienst
+
     # Einfügen der Daten
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
-        sheet.cell(row=i, column=start_col, value=name).border = thin_border
+        # Name
+        name_cell = sheet.cell(row=i, column=start_col, value=name)
+        name_cell.border = thin_border
 
         # Personalnummer als Zahl darstellen
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1)
         if personalnummer.isdigit():
             numeric_personalnummer = int(personalnummer)  # Konvertieren in Zahl
-            personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=numeric_personalnummer)
+            personalnummer_cell.value = numeric_personalnummer
             personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
         else:
-            # Bei "Unbekannt" oder anderen Texten als Text speichern
-            personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
-            personalnummer_cell.number_format = '@'
-
+            personalnummer_cell.value = personalnummer  # Bei "Unbekannt" oder anderen Texten
         personalnummer_cell.border = thin_border
 
-        # Gesamtverdienst mit Währungsformat
+        # Gesamtverdienst
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
         total_cell.number_format = '#,##0.00 €'
         total_cell.border = thin_border
 
     # Gesamtsumme aller Verdienste
-    total_row = len(summary_data) + 4
+    total_row = max_rows
     sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True)
     sheet.cell(row=total_row, column=start_col).alignment = Alignment(horizontal="right")
     sheet.cell(row=total_row, column=start_col).border = thin_border
 
     total_sum = sum(total for _, _, total in summary_data)
-    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=total_sum)
+    total_sum_cell = sheet.cell(row=total_row, column=max_cols, value=total_sum)
     total_sum_cell.font = Font(bold=True)
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
+
+    # Leere Zellen mit Rahmen versehen
+    for row in range(4, max_rows + 1):
+        for col in range(start_col, max_cols + 1):
+            cell = sheet.cell(row=row, column=col)
+            if cell.value is None:
+                cell.border = thin_border
+
+
 
 
 
@@ -236,57 +249,56 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
 
 def main():
-    st.title("Touren-Auswertung mit Monatszusammenfassung")
+    st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
     if uploaded_files:
         all_data = pd.DataFrame()
 
-        for uploaded_file in uploaded_files:
-            try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-                if not filtered_df.empty:
-                    # Debugging: Vorhandene Spalten anzeigen
-                st.write("Vorhandene Spalten:", df.columns)
+    # Verarbeitung der hochgeladenen Dateien
+for uploaded_file in uploaded_files:
+    try:
+        df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+        filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+        if not filtered_df.empty:
+            filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+            filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+        if filtered_df.empty:
+            st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
+            continue
 
-                # Überprüfen, ob die Spalte 'Datum' existiert
-                if "Datum" in df.columns:
-                    filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], format="%d.%m.%Y", errors="coerce")
-                elif 14 < len(df.columns):  # Zugriff über Index als Fallback
-                    filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
-                else:
-                    st.error("Die Spalte 'Datum' wurde in der Datei nicht gefunden.")
-                    return
-                
-                    filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
-                if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
-                    continue
+        # Relevante Spalten extrahieren
+        columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
+        extracted_data = filtered_df.iloc[:, columns_to_extract]
+        extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
 
-                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-                extracted_data = filtered_df.iloc[:, columns_to_extract]
-                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+        # Konvertiere Datum und füge Wochentag und KW hinzu
+        extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+        extracted_data["Wochentag"] = extracted_data["Datum"].dt.strftime('%A')  # Wochentag hinzufügen
+        extracted_data["Kalenderwoche"] = extracted_data["Datum"].dt.isocalendar().week  # KW hinzufügen
 
-                def calculate_earnings(row):
-                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    earnings = 0
-                    for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
-                    return earnings
+        # Berechnung des Verdienstes
+        def calculate_earnings(row):
+            lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
+            earnings = 0
+            for value in lkw_values:
+                if value in [602, 156]:
+                    earnings += 40
+                elif value in [620, 350, 520]:
+                    earnings += 20
+            return earnings
 
-                extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = extracted_data["Datum"].dt.month
-                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
-                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
+        extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
+        extracted_data["Monat"] = extracted_data["Datum"].dt.month
+        extracted_data["Jahr"] = extracted_data["Datum"].dt.year
 
-            except Exception as e:
-                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
+        # Zusammenführen der Daten
+        all_data = pd.concat([all_data, extracted_data], ignore_index=True)
+
+    except Exception as e:
+        st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
+
 
         if not all_data.empty:
             output_file = "touren_auswertung_korrekt.xlsx"
@@ -339,7 +351,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="touren_auswertung_korrekt.xlsx",
+                        file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
