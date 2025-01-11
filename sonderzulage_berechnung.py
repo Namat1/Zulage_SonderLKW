@@ -1,48 +1,66 @@
 import pandas as pd
 import streamlit as st
-import calendar
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-def apply_styles(sheet):
-    """
-    Anwendung eines klaren und übersichtlichen Business-Stils:
-    - Namenszeilen: Blau, fett.
-    - Datum-/Kopfzeilen: Hellgrau, fett.
-    - Datenzeilen: Weiß, standard.
-    - Trennung zwischen Fahrern durch leere Zeilen.
-    """
-    # Stildefinitionen
-    thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
-    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Blau für Namenszeilen
-    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Datum-/Kopfzeilen
-    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
 
-    for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-        if row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
-            for cell in row:
-                cell.fill = name_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
-                cell.border = thin_border
-        elif "Datum" in str(row[0].value):  # Kopfzeilen mit "Datum"
-            for cell in row:
-                cell.fill = header_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
-                cell.border = thin_border
-        elif all(cell.value is None for cell in row):  # Leere Trennzeilen
-            continue  # Keine Formatierung für leere Zeilen
-        else:  # Datenzeilen
-            for cell in row:
-                cell.fill = data_fill
-                cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="left")
-                cell.border = thin_border
+def restructure_data(all_data):
+    """
+    Restrukturiert die Daten, sodass Fahrer nebeneinander dargestellt werden.
+    """
+    # Alle Fahrer identifizieren
+    unique_fahrers = all_data[["Nachname", "Vorname"]].drop_duplicates()
+    unique_fahrers["Fahrer"] = unique_fahrers["Vorname"] + " " + unique_fahrers["Nachname"]
+
+    # Pivot-Struktur erstellen
+    result = pd.DataFrame()
+    for _, (nachname, vorname, fahrer) in unique_fahrers.iterrows():
+        fahrer_data = all_data[(all_data["Nachname"] == nachname) & (all_data["Vorname"] == vorname)]
+        fahrer_data = fahrer_data[["Datum", "Tour", "LKW2", "LKW3", "Verdienst"]]
+        fahrer_data.columns = [f"{fahrer}: Datum", f"{fahrer}: Tour", f"{fahrer}: LKW2", f"{fahrer}: LKW3", f"{fahrer}: Verdienst"]
+
+        if result.empty:
+            result = fahrer_data
+        else:
+            result = pd.concat([result.reset_index(drop=True), fahrer_data.reset_index(drop=True)], axis=1)
+
+    return result
+
+
+def export_to_excel(all_data):
+    """
+    Exportiert die restrukturierten Daten in eine Excel-Datei.
+    """
+    output_file = "fahrer_nebeneinander.xlsx"
+
+    try:
+        with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+            # Daten restrukturieren
+            restructured_data = restructure_data(all_data)
+            restructured_data.to_excel(writer, index=False, sheet_name="Fahrer nebeneinander")
+
+            # Stil anwenden
+            workbook = writer.book
+            sheet = workbook.active
+
+            # Farben und Stil
+            header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Kopfzeilen
+            thin_border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            for row in sheet.iter_rows():
+                for cell in row:
+                    cell.border = thin_border
+                    if cell.row == 1:  # Kopfzeile
+                        cell.fill = header_fill
+                        cell.font = Font(bold=True)
+
+    except Exception as e:
+        st.error(f"Fehler beim Exportieren der Datei: {e}")
+
+    return output_file
 
 
 def main():
@@ -55,7 +73,6 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                # Excel-Datei verarbeiten
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
                 if filtered_df.empty:
@@ -65,7 +82,6 @@ def main():
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW2", "LKW3", "Datum"]
-
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
                 def calculate_earnings(row):
@@ -87,58 +103,15 @@ def main():
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
         if not all_data.empty:
-            output_file = "touren_auswertung_korrekt.xlsx"
-            try:
-                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
+            output_file = export_to_excel(all_data)
+            with open(output_file, "rb") as file:
+                st.download_button(
+                    label="Download Auswertung",
+                    data=file,
+                    file_name="fahrer_nebeneinander.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
-                    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                        if not month_data.empty:
-                            month_name_german = {
-                                "January": "Januar", "February": "Februar", "March": "März", "April": "April",
-                                "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
-                                "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
-                            }
-                            month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
-
-                            sheet_data = []
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y"),
-                                        row["Tour"],
-                                        row["LKW2"],
-                                        row["LKW3"],
-                                        row["Verdienst"]
-                                    ])
-                                total_earnings = group["Verdienst"].sum()
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
-
-                            sheet_df = pd.DataFrame(sheet_data)
-                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
-
-                    workbook = writer.book
-                    for sheet_name in workbook.sheetnames:
-                        sheet = workbook[sheet_name]
-                        for col in sheet.columns:
-                            max_length = max(len(str(cell.value)) for cell in col if cell.value)
-                            col_letter = get_column_letter(col[0].column)
-                            sheet.column_dimensions[col_letter].width = max_length + 2
-                        apply_styles(sheet)
-
-                with open(output_file, "rb") as file:
-                    st.download_button(
-                        label="Download Auswertung",
-                        data=file,
-                        file_name="touren_auswertung_korrekt.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            except Exception as e:
-                st.error(f"Fehler beim Exportieren der Datei: {e}")
 
 if __name__ == "__main__":
     main()
