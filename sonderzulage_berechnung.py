@@ -167,7 +167,8 @@ def apply_styles(sheet):
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive Gesamtsumme aller Verdienste.
+    Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive Gesamtsumme aller Verdienste,
+    und stellt die Personalnummern als Zahlen dar (mit führenden Nullen).
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
@@ -175,7 +176,8 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-
+    
+    # Monatsname in Zeile 2
     auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat: Unbekannt"
     auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
     sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
@@ -197,28 +199,36 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=i, column=start_col, value=name).border = thin_border
 
+        # Personalnummer als Zahl darstellen
         if personalnummer.isdigit():
-            numeric_personalnummer = int(personalnummer)
+            numeric_personalnummer = int(personalnummer)  # Konvertieren in Zahl
             personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=numeric_personalnummer)
-            personalnummer_cell.number_format = '00000000'
+            personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
         else:
+            # Bei "Unbekannt" oder anderen Texten als Text speichern
             personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
             personalnummer_cell.number_format = '@'
 
         personalnummer_cell.border = thin_border
 
+        # Gesamtverdienst mit Währungsformat
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
         total_cell.number_format = '#,##0.00 €'
         total_cell.border = thin_border
 
+    # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
     sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True)
+    sheet.cell(row=total_row, column=start_col).alignment = Alignment(horizontal="right")
+    sheet.cell(row=total_row, column=start_col).border = thin_border
+
     total_sum = sum(total for _, _, total in summary_data)
     total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=total_sum)
     total_sum_cell.font = Font(bold=True)
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
+
 
 def main():
     st.title("Zulage - Sonderfahrzeuge")
