@@ -259,7 +259,7 @@ def main():
                 else:
                     st.error("Die Spalte 'Datum' wurde in der Datei nicht gefunden.")
                     return
-    
+                
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
