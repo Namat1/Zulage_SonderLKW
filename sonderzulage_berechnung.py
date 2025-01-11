@@ -198,16 +198,17 @@ def add_summary(sheet, summary_data, start_col=9):
     for idx, (name, personalnummer, total) in enumerate(summary_data, start=3):
         sheet.cell(row=idx, column=start_col, value=name).border = thin_border
         sheet.cell(row=idx, column=start_col + 1, value=personalnummer).border = thin_border
-        sheet.cell(row=idx, column=start_col + 2, value=total).border = thin_border
-        # Gesamtverdienst-Zelle als Zahl formatieren
-        sheet.cell(row=idx, column=start_col + 2).number_format = '#,##0.00 €'
+        total_cell = sheet.cell(row=idx, column=start_col + 2, value=total)
+        total_cell.border = thin_border
+        total_cell.number_format = '#,##0.00 €'  # Währungsformat
 
     # Spaltenbreite automatisch anpassen
     for col in range(start_col, start_col + 3):
         max_length = max(
             len(str(sheet.cell(row=row, column=col).value) or "") for row in range(1, len(summary_data) + 3)
         )
-        sheet.column_dimensions[get_column_letter(col)].width = max_length + 2
+        sheet.column_dimensions[get_column_letter(col)].width = max_length + 1
+
 
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
