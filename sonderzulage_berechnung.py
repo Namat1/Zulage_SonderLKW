@@ -174,6 +174,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
+    
     # Monatsname in Zeile 2
     auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat: Unbekannt"
     auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
@@ -195,10 +196,17 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     # Einfügen der Daten
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=i, column=start_col, value=name).border = thin_border
-        sheet.cell(row=i, column=start_col + 1, value=personalnummer).border = thin_border
-        cell = sheet.cell(row=i, column=start_col + 2, value=total)
-        cell.number_format = '#,##0.00 €'
-        cell.border = thin_border
+
+        # Personalnummer explizit als Text speichern
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=str(personalnummer))
+        personalnummer_cell.number_format = '@'  # '@' bedeutet "Textformat" in Excel
+        personalnummer_cell.border = thin_border
+
+        # Gesamtverdienst mit Währungsformat
+        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
+        total_cell.number_format = '#,##0.00 €'
+        total_cell.border = thin_border
+
 
 def main():
     st.title("Touren-Auswertung mit Monatszusammenfassung")
