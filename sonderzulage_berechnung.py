@@ -113,7 +113,7 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
+                cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
@@ -145,14 +145,14 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
+                cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
 
         else:  # Datenzeilen
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="left")
+                cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
