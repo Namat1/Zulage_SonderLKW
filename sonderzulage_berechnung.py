@@ -12,7 +12,7 @@ def apply_styles(sheet):
     - Namenszeilen: Hellblau, fett.
     - Kopfzeilen (Überschriften): Hellgrau, fett.
     - Gesamtverdienstzeilen: Hellgrün, fett.
-    - Datenzeilen: Weiß, normal.
+    - Datenzeilen: Weiß, normal, mit €-Zeichen bei Verdiensten.
     """
     # Stildefinitionen
     thin_border = Border(
@@ -25,7 +25,7 @@ def apply_styles(sheet):
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
 
     for row in sheet.iter_rows():
-        first_cell_value = str(row[0].value).strip() if row[0].value else ""  # Entfernt unnötige Leerzeichen
+        first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
         if "Gesamtverdienst" in first_cell_value:  # Gesamtverdienstzeilen
             for cell in row:
@@ -33,9 +33,10 @@ def apply_styles(sheet):
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
+                if cell.column == 5:  # Spalte "Verdienst" (5. Spalte)
+                    cell.value = f"{cell.value} €" if cell.value else ""
 
-        # Bedingung für Namenszeilen: Erlaubt alphanumerische Zeichen und Sonderzeichen wie Bindestrich
-        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
+        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True)
@@ -55,6 +56,8 @@ def apply_styles(sheet):
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="left")
                 cell.border = thin_border
+                if cell.column == 5:  # Spalte "Verdienst" (5. Spalte)
+                    cell.value = f"{cell.value} €" if cell.value else ""
 
 
 
