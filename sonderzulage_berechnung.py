@@ -5,7 +5,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-
 # Personalnummer-Zuordnung
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
@@ -121,8 +120,8 @@ def apply_styles(sheet):
 
         elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
             try:
-                # Hole Nachnamen und Vornamen, bereinige Leerzeichen und Sonderzeichen
-                nachname, vorname = first_cell_value.split(" ", 1)
+                # Hole Vorname und Nachname, bereinige Leerzeichen und Sonderzeichen
+                vorname, nachname = first_cell_value.split(" ", 1)
                 nachname = nachname.strip().capitalize()
                 vorname = vorname.strip().capitalize()
 
@@ -160,8 +159,6 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
-
-
 
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
