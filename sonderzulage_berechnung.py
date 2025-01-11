@@ -205,7 +205,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for idx, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=idx, column=start_col, value=name).border = thin_border
         sheet.cell(row=idx, column=start_col + 1, value=personalnummer).border = thin_border
-        total_cell = sheet.cell(row=idx, column=start_col + 2, value=total)
+        total_cell = sheet.cell(row=idx, column=start_col + 2, value=float(total))  # Konvertiere in float
         total_cell.border = thin_border
         total_cell.number_format = '#,##0.00 €'  # Währungsformat
 
@@ -215,6 +215,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
             len(str(sheet.cell(row=row, column=col).value) or "") for row in range(2, len(summary_data) + 4)
         )
         sheet.column_dimensions[get_column_letter(col)].width = max_length + 1
+
 
 
 
