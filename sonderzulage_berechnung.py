@@ -7,24 +7,31 @@ from openpyxl.utils import get_column_letter
 
 def apply_styles(sheet):
     """
-    Dynamische Anwendung eines Business-Stils auf die Excel-Zeilen.
+    Dynamische Anwendung eines Business-Stils mit besserer Unterscheidung zwischen Fahrern.
     """
     # Stildefinitionen
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für Namenszeilen
+    name_fill_odd = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für ungerade Fahrer
+    name_fill_even = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")  # Hellgrün für gerade Fahrer
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Hellgrau für Datum-/Kopfzeilen
-    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
+    data_fill_odd = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")  # Hellblau für Datenzeilen (ungerade Fahrer)
+    data_fill_even = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")  # Hellgrün für Datenzeilen (gerade Fahrer)
 
+    # Fahrer-Trennungslogik
+    is_odd = True  # Start mit ungeraden Fahrern
     for row_idx, row in enumerate(sheet.iter_rows(), start=1):
         if row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
+            # Anwenden der Farbe basierend auf "ungerade" oder "gerade" Fahrer
+            fill = name_fill_odd if is_odd else name_fill_even
             for cell in row:
-                cell.fill = name_fill
+                cell.fill = fill
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
+            is_odd = not is_odd  # Toggle für den nächsten Fahrer
         elif "Datum" in str(row[0].value):  # Kopfzeilen mit "Datum"
             for cell in row:
                 cell.fill = header_fill
@@ -32,11 +39,14 @@ def apply_styles(sheet):
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = thin_border
         else:  # Datenzeilen
+            # Anwenden der Farbe basierend auf "ungerade" oder "gerade" Fahrer
+            fill = data_fill_odd if is_odd else data_fill_even
             for cell in row:
-                cell.fill = data_fill
-                cell.font = Font(bold=False)  # Standard-Schrift für Datenzeilen
-                cell.alignment = Alignment(horizontal="left")  # Links ausgerichtet
+                cell.fill = fill
+                cell.font = Font(bold=False)
+                cell.alignment = Alignment(horizontal="left")
                 cell.border = thin_border
+
 
 
 def main():
