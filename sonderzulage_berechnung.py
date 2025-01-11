@@ -141,7 +141,7 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
+                cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
 
         else:
@@ -158,7 +158,7 @@ def apply_styles(sheet):
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
         if col_letter == "A":
-            sheet.column_dimensions[col_letter].width = 20  # Feste Breite für Spalte A
+            sheet.column_dimensions[col_letter].width = 17  # Feste Breite für Spalte A
         else:
             sheet.column_dimensions[col_letter].width = max_length + 1  # +1 für alle anderen Spalten
 
