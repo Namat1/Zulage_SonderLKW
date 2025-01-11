@@ -247,8 +247,9 @@ def main():
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-    filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], format="%d.%m.%Y", errors="coerce")
-    filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+                if not filtered_df.empty:
+                    filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], format="%d.%m.%Y", errors="coerce")
+                    filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
                     continue
