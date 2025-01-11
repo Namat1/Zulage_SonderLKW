@@ -55,7 +55,7 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="left")
+                cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):  # Spalte "Verdienst" (5. Spalte)
                     cell.number_format = '#,##0.00 €'
