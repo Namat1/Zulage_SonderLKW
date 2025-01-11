@@ -200,7 +200,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         sheet.cell(row=i, column=start_col, value=name).border = thin_border
 
         # Personalnummer als reinen Text behandeln (grüne Dreiecke verhindern)
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=str(personalnummer))
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=f"{personalnummer}")
         personalnummer_cell.number_format = '@'  # '@' steht für "Textformat" in Excel
         personalnummer_cell.border = thin_border
 
@@ -221,6 +221,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
+
 
 
 
