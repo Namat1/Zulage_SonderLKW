@@ -220,8 +220,8 @@ def main():
                                     sheet_data.append([
                                         row["Datum"].strftime("%d.%m.%Y"),
                                         row["Tour"],
-                                        row["LKW2"],
-                                        row["LKW3"],
+                                        row["LKW"],
+                                        row["Art"],
                                         row["Verdienst"]
                                     ])
                                 total_earnings = group["Verdienst"].sum()
