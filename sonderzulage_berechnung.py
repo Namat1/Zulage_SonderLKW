@@ -120,9 +120,11 @@ def apply_styles(sheet):
                     cell.number_format = '#,##0.00 €'
 
         elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:  # Namenszeilen
-            # Hole den Nachnamen und Vornamen aus der Namenszeile
             try:
+                # Hole Nachnamen und Vornamen, bereinige Leerzeichen und Sonderzeichen
                 nachname, vorname = first_cell_value.split(" ", 1)
+                nachname = nachname.strip().capitalize()
+                vorname = vorname.strip().capitalize()
                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
             except ValueError:
                 personalnummer = "Unbekannt"
