@@ -5,10 +5,41 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
+def apply_styles(sheet):
+    """
+    Dynamische Anwendung von Stilen auf die Excel-Zeilen.
+    Die Formatierung kann hier leicht angepasst werden.
+    """
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    name_fill = PatternFill(start_color="B7CCE2", end_color="B7CCE2", fill_type="solid")  # Blau für Namenszeilen
+    header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")  # Grau für Kopfzeilen
+    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß für Datenzeilen
+
+    for row_idx, row in enumerate(sheet.iter_rows(), start=1):
+        if row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
+            for cell in row:
+                cell.fill = name_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = thin_border
+        elif "Datum" in str(row[0].value):  # Kopfzeile
+            for cell in row:
+                cell.fill = header_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = thin_border
+        else:  # Datenzeilen
+            for cell in row:
+                cell.fill = data_fill
+                cell.font = Font(bold=False)  # Nicht fett für Daten
+                cell.border = thin_border
+
 def main():
     st.title("Touren-Auswertung mit klarer Trennung der Namenszeile")
 
-    # Mehrere Dateien hochladen
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
     if uploaded_files:
@@ -16,37 +47,19 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                # Lesen des Blattes "Touren" aus der aktuellen Datei
+                # Excel-Datei verarbeiten
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                st.write(f"Datei: {uploaded_file.name} - Blatt 'Touren' erfolgreich geladen.")
-
-                # Filter auf Spalte 14 (Werte Az, AZ, az)
-                try:
-                    filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-                    if filtered_df.empty:
-                        st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
-                        continue
-                except Exception as e:
-                    st.error(f"Fehler beim Filtern der Daten in Datei {uploaded_file.name}: {e}")
+                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+                if filtered_df.empty:
+                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
                     continue
 
-                # Relevante Spalten extrahieren
-                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]  # Spalten: 1, 4, 5, 11, 12, 14, 15
-                try:
-                    extracted_data = filtered_df.iloc[:, columns_to_extract]
-                    extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW2", "LKW3", "Datum"]
-                except Exception as e:
-                    st.error(f"Fehler beim Extrahieren der Spalten in Datei {uploaded_file.name}: {e}")
-                    continue
+                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
+                extracted_data = filtered_df.iloc[:, columns_to_extract]
+                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW2", "LKW3", "Datum"]
 
-                # Datumsspalte in deutschem Format (dd.mm.yyyy) formatieren
-                try:
-                    extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-                except Exception as e:
-                    st.error(f"Fehler bei der Umwandlung der Datumsspalte in Datei {uploaded_file.name}: {e}")
-                    continue
+                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
-                # Berechnung der Wertigkeiten
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW2"], row["LKW3"]]
                     earnings = 0
@@ -58,29 +71,22 @@ def main():
                     return earnings
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-
-                # Monat und Jahr hinzufügen
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
                 extracted_data["Jahr"] = extracted_data["Datum"].dt.year
-
-                # Daten zur Gesamtliste hinzufügen
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-        # Export der Ergebnisse nach Monaten
         if not all_data.empty:
             output_file = "touren_auswertung_korrekt.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    # Sortiere nach Jahr und Monat aufsteigend
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
-                            # Blattname als "Monat Jahr" in deutscher Sprache
                             month_name_german = {
                                 "January": "Januar", "February": "Februar", "March": "März", "April": "April",
                                 "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
@@ -88,14 +94,10 @@ def main():
                             }
                             month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
 
-                            # Gruppieren nach Fahrer und detaillierte Darstellung
                             sheet_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                # Fahrername als blaue Zeile
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                # Kopfzeile hinzufügen
                                 sheet_data.append(["Datum", "Tour", "LKW2", "LKW3", "Verdienst"])
-                                # Datenzeilen
                                 for _, row in group.iterrows():
                                     sheet_data.append([
                                         row["Datum"].strftime("%d.%m.%Y"),
@@ -104,53 +106,21 @@ def main():
                                         row["LKW3"],
                                         row["Verdienst"]
                                     ])
-                                # Gesamtverdienst hinzufügen
                                 total_earnings = group["Verdienst"].sum()
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                # Leere Zeile für Abstand
                                 sheet_data.append([])
 
-                            # Erstellen eines DataFrames für das aktuelle Blatt
                             sheet_df = pd.DataFrame(sheet_data)
-
-                            # Daten exportieren
                             sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
 
-                    # Automatische Spaltenbreite und Farbliche Anpassung
                     workbook = writer.book
-                    thin_border = Border(
-                        left=Side(style='thin'), right=Side(style='thin'),
-                        top=Side(style='thin'), bottom=Side(style='thin')
-                    )
-                    name_fill = PatternFill(start_color="B7CCE2", end_color="B7CCE2", fill_type="solid")
-                    header_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
-
                     for sheet_name in workbook.sheetnames:
                         sheet = workbook[sheet_name]
-
-                        # Setze Auto-Spaltenbreite
                         for col in sheet.columns:
                             max_length = max(len(str(cell.value)) for cell in col if cell.value)
                             col_letter = get_column_letter(col[0].column)
                             sheet.column_dimensions[col_letter].width = max_length + 2
-
-                        # Farben und Grid
-                        for row_idx, row in enumerate(sheet.iter_rows(), start=1):
-                            if row[0].value and row[0].value.split(" ")[0].isalpha():  # Namenszeilen
-                                for cell in row:
-                                    cell.fill = name_fill
-                                    cell.font = Font(bold=True)
-                                    cell.alignment = Alignment(horizontal="center")
-                                    cell.border = thin_border
-                            elif "Datum" in str(row[0].value):  # Kopfzeile
-                                for cell in row:
-                                    cell.fill = header_fill
-                                    cell.font = Font(bold=True)
-                                    cell.alignment = Alignment(horizontal="center")
-                                    cell.border = thin_border
-                            else:  # Datenzeilen
-                                for cell in row:
-                                    cell.border = thin_border
+                        apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
                     st.download_button(
