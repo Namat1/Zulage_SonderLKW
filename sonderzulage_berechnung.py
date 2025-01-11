@@ -168,9 +168,8 @@ def apply_styles(sheet):
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive Gesamtsumme aller Verdienste,
-    und behebt die grünen Dreiecke bei den Personalnummern.
+    ohne grüne oder rote Dreiecke.
     """
-    from openpyxl.comments import Comment  # Für potenzielles Debugging von Excel
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     thin_border = Border(
@@ -200,10 +199,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
         sheet.cell(row=i, column=start_col, value=name).border = thin_border
 
-        # Personalnummer explizit als Text speichern und verhindern, dass Excel warnt
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=f"'{personalnummer}")
+        # Personalnummer explizit als Text speichern (kein grünes Dreieck, kein führendes Apostroph)
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=str(personalnummer))
+        personalnummer_cell.number_format = '@'  # '@' bedeutet "Textformat" in Excel
         personalnummer_cell.border = thin_border
-        personalnummer_cell.comment = Comment("Als Text gespeichert, Warnungen ignorieren", "System")
 
         # Gesamtverdienst mit Währungsformat
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
@@ -222,6 +221,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
+
 
 
 
