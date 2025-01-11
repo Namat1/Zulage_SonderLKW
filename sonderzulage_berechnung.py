@@ -236,43 +236,43 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
 
 def main():
-    st.title("Touren-Auswertung mit Monatszusammenfassung")
+    st.title("Zulage - Sonderfahrzeuge")
 
-    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
+    for uploaded_file in uploaded_files:
+    try:
+        df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+        filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+        if filtered_df.empty:
+            st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
+            continue
 
-    if uploaded_files:
-        all_data = pd.DataFrame()
+        columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
+        extracted_data = filtered_df.iloc[:, columns_to_extract]
+        extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
+        extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
-        for uploaded_file in uploaded_files:
-            try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-                if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
-                    continue
+        # Filter: Nur Daten ab dem 01.01.2025
+        start_date = pd.Timestamp("2025-01-01")
+        extracted_data = extracted_data[extracted_data["Datum"] >= start_date]
 
-                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-                extracted_data = filtered_df.iloc[:, columns_to_extract]
-                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+        def calculate_earnings(row):
+            lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
+            earnings = 0
+            for value in lkw_values:
+                if value in [602, 156]:
+                    earnings += 40
+                elif value in [620, 350, 520]:
+                    earnings += 20
+            return earnings
 
-                def calculate_earnings(row):
-                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    earnings = 0
-                    for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
-                    return earnings
+        extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
+        extracted_data["Monat"] = extracted_data["Datum"].dt.month
+        extracted_data["Jahr"] = extracted_data["Datum"].dt.year
+        all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
-                extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = extracted_data["Datum"].dt.month
-                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
-                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
+    except Exception as e:
+        st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-            except Exception as e:
-                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
         if not all_data.empty:
             output_file = "touren_auswertung_korrekt.xlsx"
