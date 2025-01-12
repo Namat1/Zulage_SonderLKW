@@ -90,7 +90,8 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Daten, einschließlich Euro-Zeichen für Verdienste.
+    Optische Formatierung der Excel-Daten, einschließlich spezieller Formatierung für die erste Zeile
+    und Euro-Zeichen für Verdienste.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -100,6 +101,7 @@ def apply_styles(sheet):
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
+    special_fill = PatternFill(start_color="FF5733", end_color="FF5733", fill_type="solid")  # Spezielle Farbe
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
@@ -110,7 +112,7 @@ def apply_styles(sheet):
                 cell.font = Font(bold=True, size=12)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
-                
+
         elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
             for cell in row:
                 cell.fill = total_fill
@@ -119,61 +121,49 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
-                    
+
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
-    if row_idx == 3:  # Nur die erste relevante Zeile (z. B. Zeile 3 im Abschnitt)
-        for cell in row:
-            cell.fill = PatternFill(start_color="FF5733", end_color="FF5733", fill_type="solid")  # Neue Farbe
-            cell.font = Font(bold=True, size=14, color="FFFFFF", name="Arial")  # Angepasste Schrift
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-            cell.border = Border(
-                left=Side(style='medium'), right=Side(style='medium'),
-                top=Side(style='medium'), bottom=Side(style='medium')
-            )
-            # Euro-Formatierung für die 5. Spalte (Verdienst)
-            if cell.column == 5:
-                try:
-                    cell.value = float(cell.value)  # Konvertiere den Wert in numerischen Typ
-                    cell.number_format = '#,##0.00 €'
-                except (ValueError, TypeError):
-                    pass  # Ignoriere nicht-numerische Werte
-    else:  # Standardformatierung für andere Zeilen
-        for cell in row:
-            cell.fill = name_fill
-            cell.font = Font(bold=True, size=11)
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-            cell.border = thin_border
-            # Euro-Formatierung für die 5. Spalte (Verdienst)
-            if cell.column == 5:
-                try:
-                    cell.value = float(cell.value)
-                    cell.number_format = '#,##0.00 €'
-                except (ValueError, TypeError):
-                    pass  # Ignoriere nicht-numerische Werte
+            # Nur die erste Zeile speziell formatieren
+            if row_idx == 3:
+                for cell in row:
+                    cell.fill = special_fill
+                    cell.font = Font(bold=True, size=14, color="FFFFFF", name="Arial")  # Auffällige Schrift
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = Border(
+                        left=Side(style='medium'), right=Side(style='medium'),
+                        top=Side(style='medium'), bottom=Side(style='medium')
+                    )
+                    if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                        try:
+                            cell.value = float(cell.value)  # Konvertiere den Wert in einen numerischen Typ
+                            cell.number_format = '#,##0.00 €'
+                        except (ValueError, TypeError):
+                            pass  # Ignoriere nicht-numerische Werte
+            else:  # Standardformatierung für andere Name-Zeilen
+                for cell in row:
+                    cell.fill = name_fill
+                    cell.font = Font(bold=True, size=11)
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = thin_border
+                    if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                        try:
+                            cell.value = float(cell.value)
+                            cell.number_format = '#,##0.00 €'
+                        except (ValueError, TypeError):
+                            pass
 
-            
-    else:  # Standardformatierung für andere Zeilen
-        for cell in row:
-            cell.fill = name_fill
-            cell.font = Font(bold=True, size=11)
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-            cell.border = thin_border
-
-                    
         else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-
-                # Setze das Euro-Zeichen für die Spalte "Verdienst" (Spalte 5)
-                if cell.column == 5:
+                if cell.column == 5:  # Euro-Format für Verdienste
                     try:
-                        cell.value = float(cell.value)  # Konvertiere den Wert in einen numerischen Typ
+                        cell.value = float(cell.value)
                         cell.number_format = '#,##0.00 €'
                     except (ValueError, TypeError):
-                        pass  # Ignoriere nicht-numerische Werte
+                        pass
 
     # Spaltenbreiten automatisch anpassen
     for col in sheet.columns:
@@ -181,8 +171,9 @@ def apply_styles(sheet):
         col_letter = get_column_letter(col[0].column)
         sheet.column_dimensions[col_letter].width = max_length + 3
 
- # Erste Zeile ausblenden
+    # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
+
 
 
 def format_date_with_german_weekday(date):
