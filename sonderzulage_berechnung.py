@@ -107,7 +107,7 @@ def apply_styles(sheet):
         if row_idx == 2:  # Kopfzeile formatieren
             for cell in row:
                 cell.fill = header_fill
-                cell.font = Font(bold=True, size=12)
+                cell.font = Font(bold=True, size=11)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
         elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
@@ -129,7 +129,7 @@ def apply_styles(sheet):
         else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
-                cell.font = Font(size=11)
+                cell.font = Font(size=8)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
 
