@@ -92,12 +92,14 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Formatierung der Excel-Dateien, einschließlich Kopfzeilen und Datenzeilen.
+    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E, 
+    und automatische Anpassung der Spaltenbreite mit +1 für alle Spalten außer A.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
+    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
@@ -111,24 +113,134 @@ def apply_styles(sheet):
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
-        elif row_idx == 2:  # Kopfzeile formatieren
+                if cell.column == 5 and isinstance(cell.value, (int, float)):
+                    cell.number_format = '#,##0.00 €'
+
+        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
+            try:
+                vorname, nachname = first_cell_value.split(" ", 1)
+                vorname = "".join(vorname.strip().split()).title()
+                nachname = "".join(nachname.strip().split()).title()
+                personalnummer = (
+                    name_to_personalnummer.get(nachname, {}).get(vorname)
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))
+                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))
+                    or "Unbekannt"
+                )
+            except ValueError:
+                personalnummer = "Unbekannt"
+
+            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+            row[0].value = f"{first_cell_value} - {personalnummer}"
+            row[0].fill = name_fill
+            row[0].font = Font(bold=True)
+            row[0].alignment = Alignment(horizontal="center")
+            for cell in row:
+                cell.border = thin_border
+
+        elif "Datum" in first_cell_value:
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
+                cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
-        else:  # Datenzeilen formatieren
+
+        else:
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
+                if cell.column == 5 and isinstance(cell.value, (int, float)):
+                    cell.number_format = '#,##0.00 €'
 
-    # Spaltenbreiten automatisch anpassen
+    # Automatische Spaltenbreitenanpassung für alle Spalten
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        sheet.column_dimensions[col_letter].width = max_length + 2
+        if col_letter == "A":
+            sheet.column_dimensions[col_letter].width = 17  # Feste Breite für Spalte A
+        else:
+            sheet.column_dimensions[col_letter].width = max_length + 1  # +1 für alle anderen Spalten
+
+    # Erste Zeile ausblenden
+    sheet.row_dimensions[1].hidden = True
+
+def add_summary(sheet, summary_data, start_col=9, month_name=""):
+    """
+    Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive vollständigem Grid (auch für leere Zellen)
+    und stellt Personalnummern als Zahlen mit führenden Nullen dar.
+    """
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    
+    # Monatsname in Zeile 2
+    auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat: Unbekannt"
+    auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
+    sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
+    auszahlung_cell.font = Font(bold=True, size=12)
+    auszahlung_cell.alignment = Alignment(horizontal="center", vertical="center")
+    auszahlung_cell.fill = header_fill
+    auszahlung_cell.border = thin_border
+
+    # Zusammenfassungskopfzeilen
+    for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
+        cell = sheet.cell(row=3, column=idx)
+        cell.value = header
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+
+    # Maximale Zeilen- und Spaltenanzahl bestimmen
+    max_rows = len(summary_data) + 4  # Header + Daten + Gesamtverdienst
+    max_cols = start_col + 2          # Name, Personalnummer, Gesamtverdienst
+
+    # Einfügen der Daten
+    for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
+        # Name
+        name_cell = sheet.cell(row=i, column=start_col, value=name)
+        name_cell.border = thin_border
+
+        # Personalnummer als Zahl darstellen
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1)
+        if personalnummer.isdigit():
+            numeric_personalnummer = int(personalnummer)  # Konvertieren in Zahl
+            personalnummer_cell.value = numeric_personalnummer
+            personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
+        else:
+            personalnummer_cell.value = personalnummer  # Bei "Unbekannt" oder anderen Texten
+        personalnummer_cell.border = thin_border
+
+        # Gesamtverdienst
+        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
+        total_cell.number_format = '#,##0.00 €'
+        total_cell.border = thin_border
+
+    # Gesamtsumme aller Verdienste
+    total_row = max_rows
+    sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True)
+    sheet.cell(row=total_row, column=start_col).alignment = Alignment(horizontal="right")
+    sheet.cell(row=total_row, column=start_col).border = thin_border
+
+    total_sum = sum(total for _, _, total in summary_data)
+    total_sum_cell = sheet.cell(row=total_row, column=max_cols, value=total_sum)
+    total_sum_cell.font = Font(bold=True)
+    total_sum_cell.fill = total_fill
+    total_sum_cell.number_format = '#,##0.00 €'
+    total_sum_cell.border = thin_border
+
+    # Leere Zellen mit Rahmen versehen
+    for row in range(4, max_rows + 1):
+        for col in range(start_col, max_cols + 1):
+            cell = sheet.cell(row=row, column=col)
+            if cell.value is None:
+                cell.border = thin_border
+
 
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
