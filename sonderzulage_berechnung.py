@@ -122,7 +122,7 @@ def apply_styles(sheet):
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True, size=11)
-                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
