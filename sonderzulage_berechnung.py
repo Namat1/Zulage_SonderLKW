@@ -305,41 +305,45 @@ def main():
             output_file = "touren_auswertung_korrekt.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
+    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
 
-                   for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                       month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                       if not month_data.empty:
-                           sheet_name = f"{get_german_month_name(month)} {year}"  # Deutscher Monatsname
-                           sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])
-                            sheet_data = []
-                            summary_data = []
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                total_earnings = group["Verdienst"].sum()
-                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
+    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
+        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
+        if not month_data.empty:
+            sheet_name = f"{get_german_month_name(month)} {year}"  # Deutscher Monatsname
+            sheet_data = []
+            summary_data = []
 
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    formatted_date = format_date_with_german_weekday(row["Datum"])
-                                    sheet_data.append([
-                                        formatted_date,
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
-                                    ])
+            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                total_earnings = group["Verdienst"].sum()
+                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
 
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
+                # Gruppendaten zusammenstellen
+                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
+                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                for _, row in group.iterrows():
+                    formatted_date = format_date_with_german_weekday(row["Datum"])
+                    sheet_data.append([
+                        formatted_date,
+                        row["Tour"],
+                        row["LKW"],
+                        row["Art"],
+                        row["Verdienst"]
+                    ])
 
-                            sheet_df = pd.DataFrame(sheet_data)
-                            sheet_name = f"{calendar.month_name[month]} {year}"
-                            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])
-                            sheet = writer.sheets[sheet_name[:31]]
-                            add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
-                            apply_styles(sheet)
+                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                sheet_data.append([])
+
+            # Daten in Excel-Tabellenblatt schreiben
+            sheet_df = pd.DataFrame(sheet_data)
+            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])  # Tabellenblatt mit deutschem Namen
+            sheet = writer.sheets[sheet_name[:31]]
+
+            # Zusammenfassung und Styling anwenden
+            add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
+            apply_styles(sheet)
+
 
                 with open(output_file, "rb") as file:
                     st.download_button(
