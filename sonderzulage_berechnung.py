@@ -116,7 +116,7 @@ def apply_styles(sheet):
                 cell.font = Font(bold=True, size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5:  # Format für Euro-Zeichen
+                if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
             for cell in row:
@@ -130,13 +130,19 @@ def apply_styles(sheet):
                 cell.font = Font(size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5:  # Format für Euro-Zeichen
+                if cell.column == 5:  # Euro-Format für die Spalte "Verdienst"
                     cell.number_format = '#,##0.00 €'
+
+    # Spaltenbreiten automatisch anpassen
+    for col in sheet.columns:
+        max_length = max(len(str(cell.value) or "") for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        sheet.column_dimensions[col_letter].width = max_length + 3
 
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassung mit Euro-Zeichen für Verdienste hinzu.
+    Fügt eine Zusammenfassung der Daten hinzu, mit Euro-Zeichen für Verdienste.
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
@@ -173,18 +179,17 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         else:
             personalnummer_cell.value = personalnummer
         personalnummer_cell.border = thin_border
-        total_cell = sheet.cell(row=i, column=start_col + 2, value=f"{total:.2f} €")
-        total_cell.font = Font(size=11)
-        total_cell.alignment = Alignment(horizontal="right")
+        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
+        total_cell.number_format = '#,##0.00 €'  # Korrektes Format für Euro
         total_cell.border = thin_border
 
     # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
     sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True, size=12)
-    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=f"{sum(x[2] for x in summary_data):.2f} €")
+    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
     total_sum_cell.font = Font(bold=True, size=12)
     total_sum_cell.fill = total_fill
-    total_sum_cell.alignment = Alignment(horizontal="right")
+    total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
 
     # Leere Zellen mit Rahmen versehen
