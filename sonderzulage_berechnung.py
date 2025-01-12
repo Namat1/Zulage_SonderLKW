@@ -296,17 +296,28 @@ def main():
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
 
-                # Original- und formatierte Datumsspalte
-                extracted_data["Datum_Original"] = extracted_data["Datum"]
+                # Original- und formatierte Datumsspalte speichern
+                extracted_data["Datum_Original"] = pd.to_datetime(extracted_data["Datum"], errors="coerce")
+
+                # Prüfen, ob es ungültige Datumswerte gibt
+                if extracted_data["Datum_Original"].isnull().any():
+                    st.warning("Einige Datumseinträge konnten nicht verarbeitet werden und werden übersprungen.")
+
+                # Nur gültige Datumswerte verarbeiten
+                extracted_data = extracted_data[~extracted_data["Datum_Original"].isnull()]
+
+                # Formatiertes Datum hinzufügen
                 extracted_data["Datum"] = extracted_data["Datum_Original"].apply(format_date)
+
+                # Monat und Jahr aus dem Original-Datum extrahieren
+                extracted_data["Monat"] = extracted_data["Datum_Original"].dt.month
+                extracted_data["Jahr"] = extracted_data["Datum_Original"].dt.year
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
                     return sum(40 if v in [602, 156] else 20 for v in lkw_values if v in [602, 156, 620, 350, 520])
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = extracted_data["Datum_Original"].dt.month
-                extracted_data["Jahr"] = extracted_data["Datum_Original"].dt.year
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
