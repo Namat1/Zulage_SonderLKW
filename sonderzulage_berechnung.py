@@ -176,7 +176,7 @@ def apply_styles(sheet):
     sheet.row_dimensions[1].hidden = True
 
 
-ef add_summary(sheet, summary_data, start_col=9, month_name=""):
+def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive vollständigem Grid (auch für leere Zellen)
     und stellt Personalnummern als Zahlen mit führenden Nullen dar.
@@ -250,6 +250,7 @@ ef add_summary(sheet, summary_data, start_col=9, month_name=""):
             cell = sheet.cell(row=row, column=col)
             if cell.value is None:
                 cell.border = thin_border
+
 
 
 def main():
