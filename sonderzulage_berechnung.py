@@ -119,17 +119,17 @@ def apply_styles(sheet):
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
-            elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
-                for cell in row:
-                    if cell.column == 1:  # Nur die Zelle mit dem Namen formatieren
-                        cell.fill = PatternFill(start_color="FFD966", end_color="FFD966", fill_type="solid")  # Gelber Hintergrund
-                        cell.font = Font(bold=True, size=12, color="000000")  # Schwarze, fette Schrift
-                        cell.alignment = Alignment(horizontal="left", vertical="center")
-                    else:  # Andere Zellen in der Zeile normal formatieren
-                        cell.fill = data_fill
-                        cell.font = Font(size=11)
-                        cell.alignment = Alignment(horizontal="right", vertical="center")
-                    cell.border = thin_border
+        elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
+            for cell in row:
+                if cell.column == 1:  # Nur die Zelle mit dem Namen formatieren
+                    cell.fill = PatternFill(start_color="FFD966", end_color="FFD966", fill_type="solid")  # Gelber Hintergrund
+                    cell.font = Font(bold=True, size=12, color="000000")  # Schwarze, fette Schrift
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+                else:  # Andere Zellen in der Zeile normal formatieren
+                    cell.fill = data_fill
+                    cell.font = Font(size=11)
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.border = thin_border
 
             for cell in row:
                 cell.fill = name_fill
