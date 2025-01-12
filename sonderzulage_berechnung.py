@@ -90,16 +90,16 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Daten, einschließlich Euro-Zeichen für Verdienste.
+    Optische Formatierung der Excel-Daten, einschließlich verbundenem Namensfeld mit Personalnummer.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
+    name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
     header_fill = PatternFill(start_color="92BDF9", end_color="92BDF9", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-    name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
@@ -119,13 +119,22 @@ def apply_styles(sheet):
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
-            for cell in row:
-                cell.fill = name_fill
-                cell.font = Font(bold=True, size=11)
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für Gesamtverdienst
-                    cell.number_format = '#,##0.00 €'
+            # Ermitteln von Vorname und Nachname aus dem Text
+            try:
+                vorname, nachname = first_cell_value.split()
+                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                name_with_personalnummer = f"{vorname} {nachname} ({personalnummer})"
+            except ValueError:
+                name_with_personalnummer = first_cell_value  # Falls keine Trennung möglich
+
+            # Zellen verbinden
+            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+            name_cell = sheet.cell(row=row_idx, column=1)
+            name_cell.value = name_with_personalnummer
+            name_cell.fill = name_fill
+            name_cell.font = Font(bold=True, size=11, color="FFFFFF")
+            name_cell.alignment = Alignment(horizontal="center", vertical="center")
+            name_cell.border = thin_border
         else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
@@ -147,15 +156,16 @@ def apply_styles(sheet):
         col_letter = get_column_letter(col[0].column)
         sheet.column_dimensions[col_letter].width = max_length + 3
 
- # Erste Zeile ausblenden
+    # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
+
 
 
 
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassung der Daten hinzu, mit Euro-Zeichen für Verdienste.
+    Fügt eine Zusammenfassung der Daten hinzu, mit Personalnummer im Namensfeld.
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
@@ -173,8 +183,8 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     auszahlung_cell.fill = header_fill
     auszahlung_cell.border = thin_border
 
-    # Zusammenfassungskopfzeilen
-    for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
+    # Kopfzeilen für die Zusammenfassung
+    for idx, header in enumerate(["Name (inkl. Personalnummer)", "Gesamtverdienst (€)"], start=start_col):
         cell = sheet.cell(row=3, column=idx)
         cell.value = header
         cell.font = Font(bold=True, size=12)
@@ -184,22 +194,20 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
     # Einfügen der Daten
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
-        sheet.cell(row=i, column=start_col, value=name).border = thin_border
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1)
-        if personalnummer.isdigit():
-            personalnummer_cell.value = int(personalnummer)
-            personalnummer_cell.number_format = '00000000'
-        else:
-            personalnummer_cell.value = personalnummer
-        personalnummer_cell.border = thin_border
-        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
-        total_cell.number_format = '#,##0.00 €'  # Korrektes Format für Euro
+        name_with_personalnummer = f"{name} ({personalnummer})"
+        name_cell = sheet.cell(row=i, column=start_col, value=name_with_personalnummer)
+        name_cell.font = Font(bold=True)
+        name_cell.alignment = Alignment(horizontal="left", vertical="center")
+        name_cell.border = thin_border
+        
+        total_cell = sheet.cell(row=i, column=start_col + 1, value=total)
+        total_cell.number_format = '#,##0.00 €'
         total_cell.border = thin_border
 
     # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
     sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True, size=12)
-    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
+    total_sum_cell = sheet.cell(row=total_row, column=start_col + 1, value=sum(x[2] for x in summary_data))
     total_sum_cell.font = Font(bold=True, size=12)
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
@@ -207,9 +215,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
     # Leere Zellen mit Rahmen versehen
     for row in range(4, total_row + 1):
-        for col in range(start_col, start_col + 3):
+        for col in range(start_col, start_col + 2):
             if sheet.cell(row=row, column=col).value is None:
                 sheet.cell(row=row, column=col).border = thin_border
+
 
 
 def main():
