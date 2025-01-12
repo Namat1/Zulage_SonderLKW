@@ -281,11 +281,29 @@ def main():
         for uploaded_file in uploaded_files:
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-                if not filtered_df.empty:
-                    filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
-                    filtered_df = filtered_df[filtered_df["Datum"].notnull()]
-                    filtered_df["Datum_Formatted"] = filtered_df["Datum"].apply(format_date)
+                # Verarbeite und konvertiere die Datumsspalte
+if "Datum" in filtered_df.columns:
+    try:
+        # Konvertiere die Spalte in datetime-Objekte
+        filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
+        
+        # Entferne Zeilen mit ungültigen oder fehlenden Datumswerten
+        ungültige_daten = filtered_df[filtered_df["Datum"].isnull()]
+        if not ungültige_daten.empty:
+            st.warning(f"Ungültige Datumswerte wurden entfernt:\n{ungültige_daten[['Datum']]}")
+
+        filtered_df = filtered_df[filtered_df["Datum"].notnull()]
+
+        # Füge die formatierte Datumsspalte hinzu
+        filtered_df["Datum_Formatted"] = filtered_df["Datum"].apply(format_date)
+
+        # Debug-Ausgabe: Zeige einige Werte für die Datumsspalte
+        st.write("Erste Einträge der verarbeiteten Datumsspalte:", filtered_df[["Datum", "Datum_Formatted"]].head())
+    except Exception as e:
+        st.error(f"Fehler bei der Verarbeitung der Datumsspalte: {e}")
+else:
+    st.warning("Die Spalte 'Datum' wurde nicht gefunden.")
+
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
                     continue
