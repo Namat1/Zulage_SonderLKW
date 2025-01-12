@@ -90,7 +90,7 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Daten. Euro-Zeichen für Verdienste wird hinzugefügt.
+    Optische Formatierung der Excel-Daten, einschließlich Euro-Zeichen für Verdienste.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -117,7 +117,7 @@ def apply_styles(sheet):
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
                 if cell.column == 5:  # Format für Euro-Zeichen
-                    cell.value = f"{cell.value:.2f} €" if isinstance(cell.value, (int, float)) else cell.value
+                    cell.number_format = '#,##0.00 €'
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
             for cell in row:
                 cell.fill = name_fill
@@ -131,13 +131,8 @@ def apply_styles(sheet):
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
                 if cell.column == 5:  # Format für Euro-Zeichen
-                    cell.value = f"{cell.value:.2f} €" if isinstance(cell.value, (int, float)) else cell.value
+                    cell.number_format = '#,##0.00 €'
 
-    # Spaltenbreiten automatisch anpassen
-    for col in sheet.columns:
-        max_length = max(len(str(cell.value) or "") for cell in col)
-        col_letter = get_column_letter(col[0].column)
-        sheet.column_dimensions[col_letter].width = max_length + 3
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
