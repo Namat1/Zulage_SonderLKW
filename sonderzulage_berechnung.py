@@ -90,7 +90,7 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Daten, einschließlich separater Formatierung für die erste Zeile der Namen-Zeilen.
+    Optische Formatierung der Excel-Daten, einschließlich separater Formatierung für die erste Zeile jedes Blocks.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -99,7 +99,9 @@ def apply_styles(sheet):
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
-    first_name_fill = PatternFill(start_color="FFDD93", end_color="FFDD93", fill_type="solid")  # Separates Styling
+    first_block_fill = PatternFill(start_color="FFDD93", end_color="FFDD93", fill_type="solid")  # Separates Styling für erste Zeilen
+
+    is_first_in_block = True  # Markiert die erste Zeile eines Blocks
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
@@ -113,19 +115,21 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
+            is_first_in_block = True  # Start eines neuen Blocks
 
-        # Erste Zeile der Namen-Zeilen separat formatieren
-        elif row_idx == 2 and first_cell_value:
+        # Erste Zeile jedes Blocks formatieren
+        elif is_first_in_block and first_cell_value:
             for cell in row:
-                cell.fill = first_name_fill  # Spezielles Styling
+                cell.fill = first_block_fill  # Spezielles Styling für erste Zeile
                 cell.font = Font(bold=True, size=12, italic=True)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
+            is_first_in_block = False  # Nach der ersten Zeile
 
         # Übrige Namen-Zeilen formatieren
-        elif row_idx > 2 and first_cell_value:
+        elif first_cell_value:
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True, size=11)
@@ -150,11 +154,16 @@ def apply_styles(sheet):
                     except (ValueError, TypeError):
                         pass  # Ignoriere nicht-numerische Werte
 
+            # Markiere die nächste Zeile als potenziell erster Block
+            if not first_cell_value:
+                is_first_in_block = True
+
     # Spaltenbreiten automatisch anpassen
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
         sheet.column_dimensions[col_letter].width = max_length + 3
+
 
 
 
