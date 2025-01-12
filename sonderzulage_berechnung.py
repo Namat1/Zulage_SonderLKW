@@ -18,12 +18,13 @@ german_weekdays = {
 
 # Funktion zur Formatierung des Datums
 def format_date(date):
-    if pd.isnull(date):
-        return ""
-    
     day_of_week = german_weekdays[date.strftime("%A")]  # Wochentag in Deutsch
     week_number = date.isocalendar()[1]  # Kalenderwoche
     return date.strftime(f"%d.%m.%Y ({day_of_week}, KW{week_number})")
+
+# Formatierung anwenden
+filtered_df["Datum"] = filtered_df["Datum"].apply(format_date)
+
 
 
 # Personalnummer-Zuordnung
