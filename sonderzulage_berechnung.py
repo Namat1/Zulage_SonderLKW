@@ -117,7 +117,7 @@ def apply_styles(sheet):
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
                 if cell.column == 5:  # Format für Euro-Zeichen
-                    cell.number_format = '#,##0.00 €'
+                    cell.value = f"{cell.value:.2f} €" if isinstance(cell.value, (int, float)) else cell.value
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
             for cell in row:
                 cell.fill = name_fill
@@ -131,7 +131,7 @@ def apply_styles(sheet):
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
                 if cell.column == 5:  # Format für Euro-Zeichen
-                    cell.number_format = '#,##0.00 €'
+                    cell.value = f"{cell.value:.2f} €" if isinstance(cell.value, (int, float)) else cell.value
 
     # Spaltenbreiten automatisch anpassen
     for col in sheet.columns:
@@ -178,17 +178,18 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         else:
             personalnummer_cell.value = personalnummer
         personalnummer_cell.border = thin_border
-        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
-        total_cell.number_format = '#,##0.00 €'
+        total_cell = sheet.cell(row=i, column=start_col + 2, value=f"{total:.2f} €")
+        total_cell.font = Font(size=11)
+        total_cell.alignment = Alignment(horizontal="right")
         total_cell.border = thin_border
 
     # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
     sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True, size=12)
-    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
+    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=f"{sum(x[2] for x in summary_data):.2f} €")
     total_sum_cell.font = Font(bold=True, size=12)
     total_sum_cell.fill = total_fill
-    total_sum_cell.number_format = '#,##0.00 €'
+    total_sum_cell.alignment = Alignment(horizontal="right")
     total_sum_cell.border = thin_border
 
     # Leere Zellen mit Rahmen versehen
