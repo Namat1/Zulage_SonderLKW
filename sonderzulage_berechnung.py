@@ -121,13 +121,44 @@ def apply_styles(sheet):
                     cell.number_format = '#,##0.00 €'
                     
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
-            for cell in row:
-                cell.fill = name_fill
-                cell.font = Font(bold=True, size=11)
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+    if row_idx == 3:  # Nur die erste relevante Zeile (z. B. Zeile 3 im Abschnitt)
+        for cell in row:
+            cell.fill = PatternFill(start_color="FF5733", end_color="FF5733", fill_type="solid")  # Neue Farbe
+            cell.font = Font(bold=True, size=14, color="FFFFFF", name="Arial")  # Angepasste Schrift
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(
+                left=Side(style='medium'), right=Side(style='medium'),
+                top=Side(style='medium'), bottom=Side(style='medium')
+            )
+            # Euro-Formatierung für die 5. Spalte (Verdienst)
+            if cell.column == 5:
+                try:
+                    cell.value = float(cell.value)  # Konvertiere den Wert in numerischen Typ
                     cell.number_format = '#,##0.00 €'
+                except (ValueError, TypeError):
+                    pass  # Ignoriere nicht-numerische Werte
+    else:  # Standardformatierung für andere Zeilen
+        for cell in row:
+            cell.fill = name_fill
+            cell.font = Font(bold=True, size=11)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = thin_border
+            # Euro-Formatierung für die 5. Spalte (Verdienst)
+            if cell.column == 5:
+                try:
+                    cell.value = float(cell.value)
+                    cell.number_format = '#,##0.00 €'
+                except (ValueError, TypeError):
+                    pass  # Ignoriere nicht-numerische Werte
+
+            )
+    else:  # Standardformatierung für andere Zeilen
+        for cell in row:
+            cell.fill = name_fill
+            cell.font = Font(bold=True, size=11)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = thin_border
+
                     
         else:  # Datenzeilen formatieren
             for cell in row:
