@@ -103,8 +103,8 @@ def apply_styles(sheet):
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        # Kopfzeilen-Formatierung wird übersprungen (keine Hervorhebung von Zeile 2)
-        if "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
+        # Gesamtverdienst-Zeilen formatieren
+        if "Gesamtverdienst" in first_cell_value:
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True, size=11)
@@ -112,8 +112,9 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
-                    
-        elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
+
+        # Namen-Zeilen formatieren (einschließlich Zeile 2)
+        elif row_idx >= 2 and first_cell_value:  
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True, size=11)
@@ -121,8 +122,9 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
-                    
-        else:  # Datenzeilen formatieren
+
+        # Datenzeilen formatieren
+        else:
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(size=11)
