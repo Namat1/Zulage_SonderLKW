@@ -88,10 +88,9 @@ name_to_personalnummer = {
     "Zosel": {"Ingo": "00026303"},
 }
 
-
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Datei, einschließlich Kopfzeilen, Datenzeilen und Gesamtverdienst.
+    Optische Formatierung der Excel-Daten. Euro-Zeichen für Verdienste wird hinzugefügt.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -117,7 +116,7 @@ def apply_styles(sheet):
                 cell.font = Font(bold=True, size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):
+                if cell.column == 5:  # Format für Euro-Zeichen
                     cell.number_format = '#,##0.00 €'
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
             for cell in row:
@@ -131,7 +130,7 @@ def apply_styles(sheet):
                 cell.font = Font(size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):
+                if cell.column == 5:  # Format für Euro-Zeichen
                     cell.number_format = '#,##0.00 €'
 
     # Spaltenbreiten automatisch anpassen
@@ -142,7 +141,7 @@ def apply_styles(sheet):
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassung der Daten hinzu, mit optischer Hervorhebung und Euro-Zeichen.
+    Fügt eine Zusammenfassung mit Euro-Zeichen für Verdienste hinzu.
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
