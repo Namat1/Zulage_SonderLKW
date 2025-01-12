@@ -195,5 +195,24 @@ def main():
             except Exception as e:
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
+        if not all_data.empty:
+            # Exportiere die aufbereiteten Daten
+            output_file = "auswertung.xlsx"
+            try:
+                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+                    all_data.to_excel(writer, index=False, sheet_name="Auswertung")
+                    sheet = writer.sheets["Auswertung"]
+                    apply_styles(sheet)
+
+                with open(output_file, "rb") as file:
+                    st.download_button(
+                        label="Download Auswertung",
+                        data=file,
+                        file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            except Exception as e:
+                st.error(f"Fehler beim Exportieren der Datei: {e}")
+
 if __name__ == "__main__":
     main()
