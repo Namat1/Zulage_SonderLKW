@@ -1,4 +1,3 @@
-
 import pandas as pd
 import streamlit as st
 import calendar
@@ -175,27 +174,26 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-    # Lese die Datei
-    df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-    
-    # Prüfe, ob die Datei mindestens 15 Spalten hat
-    if len(df.columns) >= 15:
-        # Datum aus Spalte 15 (Index 14) auslesen
-        df["Datum"] = pd.to_datetime(df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
-        
-        # Filtere Daten ab dem 01.01.2025
-        df = df[df["Datum"] >= pd.Timestamp("2025-01-01")]
-        
-        # Füge eine Spalte mit festem Verdienst hinzu
-        df["Verdienst"] = 40
-        
-        # Sammle die Daten in der Gesamt-Datenstruktur
-        all_data = pd.concat([all_data, df], ignore_index=True)
-    else:
-        st.error(f"Die Datei {uploaded_file.name} hat nicht genügend Spalten.")
-except Exception as e:
-    st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
-
+                # Lese die Datei
+                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+                
+                # Prüfe, ob die Datei mindestens 15 Spalten hat
+                if len(df.columns) >= 15:
+                    # Datum aus Spalte 15 (Index 14) auslesen
+                    df["Datum"] = pd.to_datetime(df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+                    
+                    # Filtere Daten ab dem 01.01.2025
+                    df = df[df["Datum"] >= pd.Timestamp("2025-01-01")]
+                    
+                    # Füge eine Spalte mit festem Verdienst hinzu
+                    df["Verdienst"] = 40
+                    
+                    # Sammle die Daten in der Gesamt-Datenstruktur
+                    all_data = pd.concat([all_data, df], ignore_index=True)
+                else:
+                    st.error(f"Die Datei {uploaded_file.name} hat nicht genügend Spalten.")
+            except Exception as e:
+                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
 if __name__ == "__main__":
     main()
