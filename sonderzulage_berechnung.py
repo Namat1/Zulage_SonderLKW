@@ -130,14 +130,15 @@ def apply_styles(sheet):
                 cell.font = Font(size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für die Spalte "Verdienst"
-                    cell.number_format = '#,##0.00 €'
 
-    # Spaltenbreiten automatisch anpassen
-    for col in sheet.columns:
-        max_length = max(len(str(cell.value) or "") for cell in col)
-        col_letter = get_column_letter(col[0].column)
-        sheet.column_dimensions[col_letter].width = max_length + 3
+                # Setze das Euro-Zeichen für die Spalte "Verdienst" (Spalte 5)
+                if cell.column == 5:
+                    try:
+                        cell.value = float(cell.value)  # Stelle sicher, dass es sich um einen numerischen Wert handelt
+                        cell.number_format = '#,##0.00 €'
+                    except (ValueError, TypeError):
+                        pass  # Ignoriere nicht-numerische Werte
+
 
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
