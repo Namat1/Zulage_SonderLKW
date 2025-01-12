@@ -175,44 +175,27 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                df["Datum"] = pd.to_datetime(df["Datum"], format="%d.%m.%Y", errors="coerce")
-                df = df[df["Datum"] >= pd.Timestamp("2025-01-01")]
-                df["Verdienst"] = 40
-                all_data = pd.concat([all_data, df], ignore_index=True)
+    # Lese die Datei
+    df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+    
+    # Prüfe, ob die Datei mindestens 15 Spalten hat
+    if len(df.columns) >= 15:
+        # Datum aus Spalte 15 (Index 14) auslesen
+        df["Datum"] = pd.to_datetime(df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+        
+        # Filtere Daten ab dem 01.01.2025
+        df = df[df["Datum"] >= pd.Timestamp("2025-01-01")]
+        
+        # Füge eine Spalte mit festem Verdienst hinzu
+        df["Verdienst"] = 40
+        
+        # Sammle die Daten in der Gesamt-Datenstruktur
+        all_data = pd.concat([all_data, df], ignore_index=True)
+    else:
+        st.error(f"Die Datei {uploaded_file.name} hat nicht genügend Spalten.")
+except Exception as e:
+    st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-            except Exception as e:
-                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
-
-        if not all_data.empty:
-            output_file = "auswertung.xlsx"
-            try:
-                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    sheet_data = []
-                    for _, row in all_data.iterrows():
-                        sheet_data.append([
-                            format_date_with_week_info(row["Datum"]),
-                            row["Tour"],
-                            row["LKW"],
-                            row["Art"],
-                            row["Verdienst"]
-                        ])
-
-                    sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                    sheet_df.to_excel(writer, index=False, sheet_name="Auswertung")
-
-                    sheet = writer.sheets["Auswertung"]
-                    apply_styles(sheet)
-
-                with open(output_file, "rb") as file:
-                    st.download_button(
-                        label="Download Auswertung",
-                        data=file,
-                        file_name="auswertung.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            except Exception as e:
-                st.error(f"Fehler beim Exportieren der Datei: {e}")
 
 if __name__ == "__main__":
     main()
