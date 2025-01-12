@@ -290,7 +290,7 @@ def main():
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+                extracted_data["Datum"] = extracted_data["Datum"].apply(format_date)
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
