@@ -4,6 +4,8 @@ import calendar
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from datetime import datetime
+import locale
 
 def format_date(date):
     """
@@ -11,8 +13,9 @@ def format_date(date):
     """
     if pd.isnull(date):
         return ""
-    day_of_week = calendar.day_name[date.weekday()]
-    week_number = date.isocalendar()[1]
+    locale.setlocale(locale.LC_TIME, "de_DE.utf8")  # Deutsche Wochentage und Monate
+    day_of_week = date.strftime("%A")  # Wochentag
+    week_number = date.isocalendar()[1]  # Kalenderwoche
     formatted_date = date.strftime(f"%d.%m.%Y ({day_of_week}, KW{week_number})")
     return formatted_date
 
@@ -282,7 +285,6 @@ def main():
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
                 extracted_data["Datum"] = extracted_data["Datum"].apply(format_date)
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
@@ -332,7 +334,7 @@ def main():
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
-                                        format_date(row["Datum"]),  # Verwende das formatierte Datum
+                                        row["Datum"],  # Bereits formatiertes Datum verwenden
                                         row["Tour"],
                                         row["LKW"],
                                         row["Art"],
