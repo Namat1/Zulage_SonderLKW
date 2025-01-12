@@ -191,6 +191,9 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
             if sheet.cell(row=row, column=col).value is None:
                 sheet.cell(row=row, column=col).border = thin_border
 
+# Erste Zeile ausblenden
+    sheet.row_dimensions[1].hidden = True
+
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
