@@ -98,16 +98,20 @@ def apply_styles(sheet):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
-    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+       header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        if "Gesamtverdienst" in first_cell_value:
+        if row_idx == 2:  # Kopfzeile formatieren
+            for cell in row:
+                cell.fill = header_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = thin_border
+        elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True)
@@ -115,44 +119,12 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0.00 €'
-
-        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
-            try:
-                vorname, nachname = first_cell_value.split(" ", 1)
-                vorname = "".join(vorname.strip().split()).title()
-                nachname = "".join(nachname.strip().split()).title()
-                personalnummer = (
-                    name_to_personalnummer.get(nachname, {}).get(vorname)
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))
-                    or "Unbekannt"
-                )
-            except ValueError:
-                personalnummer = "Unbekannt"
-
-            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-            row[0].value = f"{first_cell_value} - {personalnummer}"
-            row[0].fill = name_fill
-            row[0].font = Font(bold=True)
-            row[0].alignment = Alignment(horizontal="center")
-            for cell in row:
-                cell.border = thin_border
-
-        elif "Datum" in first_cell_value:
-            for cell in row:
-                cell.fill = header_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
-                cell.border = thin_border
-
-        else:
+        else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):
-                    cell.number_format = '#,##0.00 €'
 
     # Spaltenbreiten automatisch anpassen
     for col in sheet.columns:
