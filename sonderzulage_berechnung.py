@@ -276,7 +276,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
-    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Lade Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
     if uploaded_files:
         all_data = pd.DataFrame()
@@ -289,26 +289,20 @@ def main():
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
                 if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
+                    st.warning(f"Keine passenden Daten in {uploaded_file.name}.")
                     continue
 
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
 
-                # Formatierte und originale Datumsspalte speichern
+                # Original- und formatierte Datumsspalte
                 extracted_data["Datum_Original"] = extracted_data["Datum"]
                 extracted_data["Datum"] = extracted_data["Datum_Original"].apply(format_date)
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    earnings = 0
-                    for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
-                    return earnings
+                    return sum(40 if v in [602, 156] else 20 for v in lkw_values if v in [602, 156, 620, 350, 520])
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
                 extracted_data["Monat"] = extracted_data["Datum_Original"].dt.month
@@ -316,66 +310,47 @@ def main():
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
-                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
+                st.error(f"Fehler bei {uploaded_file.name}: {e}")
 
         if not all_data.empty:
             output_file = "touren_auswertung_korrekt.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
-                    month_name_german = {
-                        "January": "Januar", "February": "Februar", "March": "März", "April": "April",
-                        "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
-                        "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
-                    }
-
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
-                            try:
-                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
-                            except KeyError:
-                                month_name = f"Unbekannter Monat {year}"
-
+                            month_name = f"{calendar.month_name[month]} {year}"
                             sheet_data = []
                             summary_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 total_earnings = group["Verdienst"].sum()
                                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
                                 summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
-
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
-                                        row["Datum"],  # Bereits formatiertes Datum verwenden
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
+                                        row["Datum"], row["Tour"], row["LKW"], row["Art"], row["Verdienst"]
                                     ])
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
                                 sheet_data.append([])
 
                             sheet_df = pd.DataFrame(sheet_data)
                             sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
-
                             sheet = writer.sheets[month_name[:31]]
                             apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
                     st.download_button(
-                        label="Download Auswertung",
+                        label="Download Ergebnis",
                         data=file,
                         file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
-                st.error(f"Fehler beim Exportieren der Datei: {e}")
+                st.error(f"Fehler beim Export: {e}")
 
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
