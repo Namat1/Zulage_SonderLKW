@@ -96,7 +96,6 @@ def apply_styles(sheet):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    header_fill = PatternFill(start_color="92BDF9", end_color="92BDF9", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
@@ -104,14 +103,8 @@ def apply_styles(sheet):
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        if row_idx == 2:  # Kopfzeile formatieren
-            for cell in row:
-                cell.fill = header_fill
-                cell.font = Font(bold=True, size=12)
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = thin_border
-                
-        elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
+        # Kopfzeilen-Formatierung wird übersprungen (keine Hervorhebung von Zeile 2)
+        if "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True, size=11)
@@ -149,6 +142,7 @@ def apply_styles(sheet):
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
         sheet.column_dimensions[col_letter].width = max_length + 3
+
 
  # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
