@@ -270,74 +270,79 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
 
 
+# Hauptfunktion
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
-    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
+    # Hochladen der Excel-Dateien
+    uploaded_files = st.file_uploader(
+        "Lade eine oder mehrere Excel-Dateien hoch", 
+        type=["xlsx", "xls"], 
+        accept_multiple_files=True
+    )
 
     if uploaded_files:
         all_data = pd.DataFrame()
 
         for uploaded_file in uploaded_files:
             try:
+                # Einlesen der Datei
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+
+                # Filter auf Spalte 13 mit "AZ"
+                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+
                 # Verarbeite und konvertiere die Datumsspalte
-if "Datum" in filtered_df.columns:
-    try:
-        # Konvertiere die Spalte in datetime-Objekte
-        filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
-        
-        # Entferne Zeilen mit ungültigen oder fehlenden Datumswerten
-        ungültige_daten = filtered_df[filtered_df["Datum"].isnull()]
-        if not ungültige_daten.empty:
-            st.warning(f"Ungültige Datumswerte wurden entfernt:\n{ungültige_daten[['Datum']]}")
+                if "Datum" in filtered_df.columns:
+                    filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
 
-        filtered_df = filtered_df[filtered_df["Datum"].notnull()]
+                    # Entferne ungültige oder fehlende Datumswerte
+                    invalid_dates = filtered_df[filtered_df["Datum"].isnull()]
+                    if not invalid_dates.empty:
+                        st.warning(f"Ungültige Datumswerte entfernt:\n{invalid_dates[['Datum']]}")
 
-        # Füge die formatierte Datumsspalte hinzu
-        filtered_df["Datum_Formatted"] = filtered_df["Datum"].apply(format_date)
+                    filtered_df = filtered_df[filtered_df["Datum"].notnull()]
 
-        # Debug-Ausgabe: Zeige einige Werte für die Datumsspalte
-        st.write("Erste Einträge der verarbeiteten Datumsspalte:", filtered_df[["Datum", "Datum_Formatted"]].head())
-    except Exception as e:
-        st.error(f"Fehler bei der Verarbeitung der Datumsspalte: {e}")
-else:
-    st.warning("Die Spalte 'Datum' wurde nicht gefunden.")
+                    # Füge formatierte Datumsspalte hinzu
+                    filtered_df["Datum_Formatted"] = filtered_df["Datum"].apply(format_date)
+                else:
+                    st.warning(f"Spalte 'Datum' fehlt in der Datei {uploaded_file.name}")
+                    continue
 
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
                     continue
 
+                # Extrahiere relevante Spalten
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                # Konvertiere Datum und wende die Formatierung an
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-                extracted_data["Datum_Formatted"] = extracted_data["Datum"].apply(format_date)
 
+                # Berechne Verdienste
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    earnings = 0
-                    for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
+                    earnings = sum(40 if value in [602, 156] else 20 for value in lkw_values if value in [602, 156, 620, 350, 520])
                     return earnings
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
+
+                # Füge Monat und Jahr hinzu
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
                 extracted_data["Jahr"] = extracted_data["Datum"].dt.year
+
+                # Zur Gesamtauswertung hinzufügen
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
+        # Excel-Datei erstellen
         if not all_data.empty:
             output_file = "touren_auswertung_korrekt.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
+
                     month_name_german = {
                         "January": "Januar", "February": "Februar", "March": "März", "April": "April",
                         "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
@@ -353,33 +358,19 @@ else:
                                 month_name = f"Unbekannter Monat {year}"
 
                             sheet_data = []
-                            summary_data = []
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                total_earnings = group["Verdienst"].sum()
-                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
+                            for _, row in month_data.iterrows():
+                                sheet_data.append([
+                                    row["Datum_Formatted"],  # Formatiertes Datum verwenden
+                                    row["Tour"],
+                                    row["Nachname"],
+                                    row["Vorname"],
+                                    row["Verdienst"]
+                                ])
 
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    sheet_data.append([
-                                        row["Datum_Formatted"],  # Verwende das formatierte Datum
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
-                                    ])
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
-
-                            sheet_df = pd.DataFrame(sheet_data)
+                            sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "Nachname", "Vorname", "Verdienst"])
                             sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
 
-                            sheet = writer.sheets[month_name[:31]]
-                            add_summary(sheet, summary_data, start_col=9, month_name=month_name)
-
-                            apply_styles(sheet)
-
+                # Datei als Download bereitstellen
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
@@ -389,7 +380,6 @@ else:
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
-
 
 if __name__ == "__main__":
     main()
