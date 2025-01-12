@@ -151,7 +151,7 @@ def apply_styles(sheet):
                 except (ValueError, TypeError):
                     pass  # Ignoriere nicht-numerische Werte
 
-            )
+            
     else:  # Standardformatierung für andere Zeilen
         for cell in row:
             cell.fill = name_fill
