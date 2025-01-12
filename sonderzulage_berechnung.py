@@ -124,6 +124,8 @@ def apply_styles(sheet):
                 cell.font = Font(bold=True, size=11)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
+                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                    cell.number_format = '#,##0.00 €'
         else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
