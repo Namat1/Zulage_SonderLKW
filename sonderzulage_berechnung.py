@@ -4,9 +4,8 @@ import calendar
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-from datetime import datetime
 
-# Manuelles Mapping für deutsche Wochentage
+# Mapping der Wochentage ins Deutsche
 german_weekdays = {
     "Monday": "Montag",
     "Tuesday": "Dienstag",
@@ -17,11 +16,13 @@ german_weekdays = {
     "Sunday": "Sonntag"
 }
 
+# Funktion zur Formatierung des Datums
 def format_date(date):
     if pd.isnull(date):
         return ""
-    day_of_week = german_weekdays[date.strftime("%A")]
-    week_number = date.isocalendar()[1]
+    
+    day_of_week = german_weekdays[date.strftime("%A")]  # Wochentag in Deutsch
+    week_number = date.isocalendar()[1]  # Kalenderwoche
     return date.strftime(f"%d.%m.%Y ({day_of_week}, KW{week_number})")
 
 
@@ -259,124 +260,116 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
             cell = sheet.cell(row=row, column=col)
             if cell.value is None:
                 cell.border = thin_border
+
+
+
+
+
+
+
+
+
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
-    uploaded_files = st.file_uploader(
-        "Lade eine oder mehrere Excel-Dateien hoch", 
-        type=["xlsx", "xls"], 
-        accept_multiple_files=True
-    )
+    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
     if uploaded_files:
         all_data = pd.DataFrame()
-        output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
 
-        try:
-            with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                for uploaded_file in uploaded_files:
-                    try:
-                        # Excel-Datei einlesen
-                        df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                        
-                        # Filter auf Spalte 13 mit AZ
-                        filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
-                        
-                        if not filtered_df.empty:
-                            # Versuch, die Spalte Datum in datetime zu konvertieren
-                            filtered_df["Datum"] = pd.to_datetime(
-                                filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce"
-                            )
-                            
-                            # Überprüfung auf ungültige oder fehlende Werte in der Datumsspalte
-                            if filtered_df["Datum"].isnull().any():
-                                st.warning(
-                                    f"Ungültige oder fehlende Datumswerte in der Datei {uploaded_file.name} gefunden. Diese werden ignoriert."
-                                )
-                                filtered_df = filtered_df[filtered_df["Datum"].notnull()]
+        for uploaded_file in uploaded_files:
+            try:
+                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+                if not filtered_df.empty:
+                    filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+                    filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+                if filtered_df.empty:
+                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
+                    continue
 
-                            # Sicherstellen, dass .dt-Methoden verwendet werden können
-                            if not pd.api.types.is_datetime64_any_dtype(filtered_df["Datum"]):
-                                st.error(
-                                    f"Die Spalte 'Datum' in der Datei {uploaded_file.name} enthält keine gültigen Datumswerte."
-                                )
-                                continue  # Springt zur nächsten Datei
+                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
+                extracted_data = filtered_df.iloc[:, columns_to_extract]
+                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
+                # Konvertiere Datum und wende die Formatierung an
+                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+                extracted_data["Datum"] = extracted_data["Datum"].apply(format_date)
 
-                            # Filter auf Daten ab 2025
-                            filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
 
-                        if filtered_df.empty:
-                            st.warning(
-                                f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden."
-                            )
-                            continue
+                def calculate_earnings(row):
+                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
+                    earnings = 0
+                    for value in lkw_values:
+                        if value in [602, 156]:
+                            earnings += 40
+                        elif value in [620, 350, 520]:
+                            earnings += 20
+                    return earnings
 
-                        # Extrahieren der relevanten Spalten
-                        columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-                        extracted_data = filtered_df.iloc[:, columns_to_extract]
-                        extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
+                extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
+                extracted_data["Monat"] = extracted_data["Datum"].dt.month
+                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
+                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
-                        # Formatieren der Datumswerte
-                        extracted_data["Datum"] = pd.to_datetime(
-                            extracted_data["Datum"], format="%Y-%m-%d", errors="coerce"
-                        ).apply(format_date)
+            except Exception as e:
+                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-                        # Berechnung der Verdienste
-                        def calculate_earnings(row):
-                            lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                            earnings = 0
-                            for value in lkw_values:
-                                if value in [602, 156]:
-                                    earnings += 40
-                                elif value in [620, 350, 520]:
-                                    earnings += 20
-                            return earnings
+        if not all_data.empty:
+            output_file = "touren_auswertung_korrekt.xlsx"
+            try:
+                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
+                    month_name_german = {
+                        "January": "Januar", "February": "Februar", "March": "März", "April": "April",
+                        "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
+                        "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
+                    }
 
-                        extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
+                    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
+                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
+                        if not month_data.empty:
+                            try:
+                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
+                            except KeyError:
+                                month_name = f"Unbekannter Monat {year}"
 
-                        # Monat und Jahr hinzufügen
-                        extracted_data["Monat"] = pd.to_datetime(
-                            extracted_data["Datum"], format="%d.%m.%Y", errors="coerce"
-                        ).dt.month
-                        extracted_data["Jahr"] = pd.to_datetime(
-                            extracted_data["Datum"], format="%d.%m.%Y", errors="coerce"
-                        ).dt.year
+                            sheet_data = []
+                            summary_data = []
+                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                                total_earnings = group["Verdienst"].sum()
+                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
 
-                        # Daten zur Gesamtauswertung hinzufügen
-                        all_data = pd.concat([all_data, extracted_data], ignore_index=True)
+                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
+                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                                for _, row in group.iterrows():
+                                    sheet_data.append([
+                                        row["Datum"].strftime("%d.%m.%Y"),
+                                        row["Tour"],
+                                        row["LKW"],
+                                        row["Art"],
+                                        row["Verdienst"]
+                                    ])
+                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                                sheet_data.append([])
 
-                        # Gruppierung und Styling für jede Datei
-                        for (jahr, monat), group in extracted_data.groupby(["Jahr", "Monat"]):
-                            if group.empty:
-                                continue
-                            month_name = calendar.month_name[monat]
-                            sheet_name = f"{month_name} {jahr}"
-                            group.drop(columns=["Monat", "Jahr"], inplace=True)
-                            group.to_excel(writer, sheet_name=sheet_name, index=False)
+                            sheet_df = pd.DataFrame(sheet_data)
+                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
 
-                            # Apply styles to the sheet
-                            sheet = writer.sheets[sheet_name]
+                            sheet = writer.sheets[month_name[:31]]
+                            add_summary(sheet, summary_data, start_col=9, month_name=month_name)
+
                             apply_styles(sheet)
 
-                    except Exception as e:
-                        st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
-
-                # Wenn keine sichtbaren Blätter vorhanden sind, füge ein Standardblatt hinzu
-                if not writer.book.sheetnames:
-                    default_sheet = writer.book.create_sheet(title="Keine Daten")
-                    default_sheet.cell(1, 1).value = "Keine passenden Daten für die Verarbeitung gefunden."
-
-            # Datei als Download-Option bereitstellen
-            with open(output_file, "rb") as file:
-                st.download_button(
-                    label="Download Excel-Datei",
-                    data=file,
-                    file_name=output_file,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
-
-        except Exception as e:
-            st.error(f"Fehler beim Speichern der Datei: {e}")
+                with open(output_file, "rb") as file:
+                    st.download_button(
+                        label="Download Auswertung",
+                        data=file,
+                        file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            except Exception as e:
+                st.error(f"Fehler beim Exportieren der Datei: {e}")
 
 
 if __name__ == "__main__":
