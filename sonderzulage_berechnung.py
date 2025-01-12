@@ -264,8 +264,9 @@ def main():
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+
                 if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
+                    st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
@@ -296,47 +297,23 @@ def main():
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
-                    month_name_german = {
-                        "January": "Januar", "February": "Februar", "March": "März", "April": "April",
-                        "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
-                        "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
-                    }
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
-                            try:
-                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
-                            except KeyError:
-                                month_name = f"Unbekannter Monat {year}"
-
                             sheet_data = []
-                            summary_data = []
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                total_earnings = group["Verdienst"].sum()
-                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
-
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),  # Format für die Datumszelle
-                                        row["Tour"],                                   # Unveränderte Tour-Daten
-                                        row["LKW"],                                    # Unveränderter LKW
-                                        row["Art"],                                    # Unveränderte Art
-                                        row["Verdienst"]                               # Verdienst bleibt gleich
-                                    ])
-
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
-
-                            sheet_df = pd.DataFrame(sheet_data)
-                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
-
-                            sheet = writer.sheets[month_name[:31]]
-                            add_summary(sheet, summary_data, start_col=9, month_name=month_name)
-
+                            for _, row in month_data.iterrows():
+                                sheet_data.append([
+                                    row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),  # Datum formatieren
+                                    row["Tour"],
+                                    row["LKW"],
+                                    row["Art"],
+                                    row["Verdienst"]
+                                ])
+                            sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                            sheet_name = f"{calendar.month_name[month]} {year}"
+                            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])
+                            sheet = writer.sheets[sheet_name[:31]]
                             apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
