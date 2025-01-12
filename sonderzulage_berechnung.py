@@ -4,6 +4,19 @@ import calendar
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+import calendar
+
+# Deutsche Monatsnamen
+german_months = [
+    "Dummy",  # Platzhalter für den Index 0
+    "Januar", "Februar", "März", "April", "Mai", "Juni",
+    "Juli", "August", "September", "Oktober", "November", "Dezember"
+]
+
+# Funktion für deutschen Monatsnamen
+def get_german_month_name(month_number):
+    return german_months[month_number]
+
 
 # Personalnummer-Zuordnung (verkürzt)
 name_to_personalnummer = {
@@ -294,9 +307,11 @@ def main():
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
 
-                    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                        if not month_data.empty:
+                   for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
+                       month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
+                       if not month_data.empty:
+                           sheet_name = f"{get_german_month_name(month)} {year}"  # Deutscher Monatsname
+                           sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])
                             sheet_data = []
                             summary_data = []
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
