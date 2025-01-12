@@ -344,13 +344,14 @@ def main():
             add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
             apply_styles(sheet)
 
+with open(output_file, "rb") as file:
+    st.download_button(
+        label="Download Auswertung",
+        data=file,
+        file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
-                with open(output_file, "rb") as file:
-                    st.download_button(
-                        label="Download Auswertung",
-                        data=file,
-                        file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
