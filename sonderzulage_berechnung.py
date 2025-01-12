@@ -15,6 +15,7 @@ german_weekdays = {
     "Friday": "Freitag",
     "Saturday": "Samstag",
     "Sunday": "Sonntag"
+}
 
 def format_date(date):
     """
