@@ -298,6 +298,7 @@ def main():
             except Exception as e:
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
+          
         if not all_data.empty:
     output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
     try:
