@@ -4,15 +4,6 @@ import calendar
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-import datetime
-
-def format_date_with_weekday_and_week(date):
-    if pd.isnull(date):
-        return ""
-    weekday = date.strftime("%A")  # Wochentag
-    week_number = date.isocalendar()[1]  # Kalenderwoche
-    formatted_date = date.strftime(f"%d.%m.%Y({weekday}, KW{week_number})")
-    return formatted_date
 
 # Personalnummer-Zuordnung
 name_to_personalnummer = {
@@ -100,7 +91,7 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E,
+    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E, 
     und automatische Anpassung der Spaltenbreite mit +1 für alle Spalten außer A.
     """
     thin_border = Border(
@@ -174,6 +165,89 @@ def apply_styles(sheet):
     # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
 
+def add_summary(sheet, summary_data, start_col=9, month_name=""):
+    """
+    Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive vollständigem Grid (auch für leere Zellen)
+    und stellt Personalnummern als Zahlen mit führenden Nullen dar.
+    """
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    
+    # Monatsname in Zeile 2
+    auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat: Unbekannt"
+    auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
+    sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
+    auszahlung_cell.font = Font(bold=True, size=12)
+    auszahlung_cell.alignment = Alignment(horizontal="center", vertical="center")
+    auszahlung_cell.fill = header_fill
+    auszahlung_cell.border = thin_border
+
+    # Zusammenfassungskopfzeilen
+    for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
+        cell = sheet.cell(row=3, column=idx)
+        cell.value = header
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+
+    # Maximale Zeilen- und Spaltenanzahl bestimmen
+    max_rows = len(summary_data) + 4  # Header + Daten + Gesamtverdienst
+    max_cols = start_col + 2          # Name, Personalnummer, Gesamtverdienst
+
+    # Einfügen der Daten
+    for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
+        # Name
+        name_cell = sheet.cell(row=i, column=start_col, value=name)
+        name_cell.border = thin_border
+
+        # Personalnummer als Zahl darstellen
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1)
+        if personalnummer.isdigit():
+            numeric_personalnummer = int(personalnummer)  # Konvertieren in Zahl
+            personalnummer_cell.value = numeric_personalnummer
+            personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
+        else:
+            personalnummer_cell.value = personalnummer  # Bei "Unbekannt" oder anderen Texten
+        personalnummer_cell.border = thin_border
+
+        # Gesamtverdienst
+        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
+        total_cell.number_format = '#,##0.00 €'
+        total_cell.border = thin_border
+
+    # Gesamtsumme aller Verdienste
+    total_row = max_rows
+    sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True)
+    sheet.cell(row=total_row, column=start_col).alignment = Alignment(horizontal="right")
+    sheet.cell(row=total_row, column=start_col).border = thin_border
+
+    total_sum = sum(total for _, _, total in summary_data)
+    total_sum_cell = sheet.cell(row=total_row, column=max_cols, value=total_sum)
+    total_sum_cell.font = Font(bold=True)
+    total_sum_cell.fill = total_fill
+    total_sum_cell.number_format = '#,##0.00 €'
+    total_sum_cell.border = thin_border
+
+    # Leere Zellen mit Rahmen versehen
+    for row in range(4, max_rows + 1):
+        for col in range(start_col, max_cols + 1):
+            cell = sheet.cell(row=row, column=col)
+            if cell.value is None:
+                cell.border = thin_border
+
+
+
+
+
+
+
+
+
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
@@ -185,11 +259,10 @@ def main():
         for uploaded_file in uploaded_files:
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'\b(AZ)\b', na=False)]
+                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
-
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
                     continue
@@ -201,7 +274,13 @@ def main():
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    return sum(40 if v in [602, 156] else 20 if v in [620, 350, 520] else 0 for v in lkw_values)
+                    earnings = 0
+                    for value in lkw_values:
+                        if value in [602, 156]:
+                            earnings += 40
+                        elif value in [620, 350, 520]:
+                            earnings += 20
+                    return earnings
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
@@ -212,26 +291,62 @@ def main():
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
         if not all_data.empty:
-            output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
+            output_file = "touren_auswertung_korrekt.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
+                    month_name_german = {
+                        "January": "Januar", "February": "Februar", "March": "März", "April": "April",
+                        "May": "Mai", "June": "Juni", "July": "Juli", "August": "August",
+                        "September": "September", "October": "Oktober", "November": "November", "December": "Dezember"
+                    }
+
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                        month_name = calendar.month_name[month]
-                        sheet_name = f"{month_name}_{year}"[:31]
-                        month_data.to_excel(writer, sheet_name=sheet_name, index=False)
+                        if not month_data.empty:
+                            try:
+                                month_name = f"{month_name_german[calendar.month_name[month]]} {year}"
+                            except KeyError:
+                                month_name = f"Unbekannter Monat {year}"
+
+                            sheet_data = []
+                            summary_data = []
+                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                                total_earnings = group["Verdienst"].sum()
+                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
+
+                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
+                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                                for _, row in group.iterrows():
+                                    sheet_data.append([
+                                        row["Datum"].strftime("%d.%m.%Y"),
+                                        row["Tour"],
+                                        row["LKW"],
+                                        row["Art"],
+                                        row["Verdienst"]
+                                    ])
+                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                                sheet_data.append([])
+
+                            sheet_df = pd.DataFrame(sheet_data)
+                            sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
+
+                            sheet = writer.sheets[month_name[:31]]
+                            add_summary(sheet, summary_data, start_col=9, month_name=month_name)
+
+                            apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name=output_file,
+                        file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
-
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
+
 
 if __name__ == "__main__":
     main()
