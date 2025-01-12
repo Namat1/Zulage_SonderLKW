@@ -298,8 +298,7 @@ def main():
             except Exception as e:
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-          
-        if not all_data.empty:
+    if not all_data.empty:
     output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
     try:
         with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
@@ -359,6 +358,9 @@ def main():
     except Exception as e:
         st.error(f"Fehler beim Exportieren der Datei: {e}")
 
+
+          
+        
 
 if __name__ == "__main__":
     main()
