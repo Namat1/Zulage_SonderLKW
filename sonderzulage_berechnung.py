@@ -5,16 +5,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-# Mapping der Wochentage ins Deutsche
-german_weekdays = {
-    "Monday": "Montag",
-    "Tuesday": "Dienstag",
-    "Wednesday": "Mittwoch",
-    "Thursday": "Donnerstag",
-    "Friday": "Freitag",
-    "Saturday": "Samstag",
-    "Sunday": "Sonntag"
-}
 
 # Personalnummer-Zuordnung
 name_to_personalnummer = {
@@ -331,12 +321,13 @@ def main():
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
+                                        row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),  # Format für die Datumszelle
+                                        row["Tour"],                                   # Unveränderte Tour-Daten
+                                        row["LKW"],                                    # Unveränderter LKW
+                                        row["Art"],                                    # Unveränderte Art
+                                        row["Verdienst"]                               # Verdienst bleibt gleich
                                     ])
+
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
                                 sheet_data.append([])
 
