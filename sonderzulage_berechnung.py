@@ -185,10 +185,11 @@ def main():
         for uploaded_file in uploaded_files:
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\\b(AZ)\\b', na=False)]
+                filtered_df = df[df.iloc[:, 13].str.contains(r'\b(AZ)\b', na=False)]
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
                     continue
@@ -198,22 +199,13 @@ def main():
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
-                # Formatieren des Datums mit Wochentag und Kalenderwoche
-                extracted_data["Datum"] = extracted_data["Datum"].apply(format_date_with_weekday_and_week)
-
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
-                    earnings = 0
-                    for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
-                    return earnings
+                    return sum(40 if v in [602, 156] else 20 if v in [620, 350, 520] else 0 for v in lkw_values)
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = pd.to_datetime(filtered_df.iloc[:, 14]).dt.month
-                extracted_data["Jahr"] = pd.to_datetime(filtered_df.iloc[:, 14]).dt.year
+                extracted_data["Monat"] = extracted_data["Datum"].dt.month
+                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
@@ -239,4 +231,7 @@ def main():
                     )
 
             except Exception as e:
-                st.error
+                st.error(f"Fehler beim Exportieren der Datei: {e}")
+
+if __name__ == "__main__":
+    main()
