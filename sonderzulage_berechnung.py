@@ -320,7 +320,7 @@ def main():
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y (%A, KW%W)")
+                                        row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),
                                         row["Tour"],
                                         row["LKW"],
                                         row["Art"],
