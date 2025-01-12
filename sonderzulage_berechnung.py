@@ -293,28 +293,32 @@ def main():
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
 
                 # Verarbeite und konvertiere die Datumsspalte
-if "Datum" in filtered_df.columns:
-    try:
-        # Konvertiere die Spalte in datetime-Objekte
-        filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
+                if "Datum" in filtered_df.columns:
+                    try:
+                        # Konvertiere die Spalte in datetime-Objekte
+                        filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
 
-        # Entferne Zeilen mit ungültigen oder fehlenden Datumswerten
-        invalid_dates = filtered_df[filtered_df["Datum"].isnull()]
-        if not invalid_dates.empty:
-            st.warning(f"Ungültige Datumswerte entfernt:\n{invalid_dates[['Datum']]}")
+                        # Entferne ungültige oder fehlende Datumswerte
+                        invalid_dates = filtered_df[filtered_df["Datum"].isnull()]
+                        if not invalid_dates.empty:
+                            st.warning(f"Ungültige Datumswerte entfernt:\n{invalid_dates[['Datum']]}")
 
-        filtered_df = filtered_df[filtered_df["Datum"].notnull()]
+                        filtered_df = filtered_df[filtered_df["Datum"].notnull()]
 
-        # Füge die formatierte Datumsspalte hinzu
-        filtered_df["Datum_Formatted"] = filtered_df["Datum"].apply(format_date)
+                        # Füge die formatierte Datumsspalte hinzu
+                        filtered_df["Datum_Formatted"] = filtered_df["Datum"].apply(format_date)
 
-        # Debug-Ausgabe: Zeige einige Werte für die Datumsspalte
-        st.write("Erste Einträge der verarbeiteten Datumsspalte:", filtered_df[["Datum", "Datum_Formatted"]].head())
-    except Exception as e:
-        st.error(f"Fehler bei der Verarbeitung der Datumsspalte: {e}")
-else:
-    st.warning("Die Spalte 'Datum' wurde nicht gefunden.")
+                        # Debug-Ausgabe: Zeige einige Werte für die Datumsspalte
+                        st.write("Erste Einträge der verarbeiteten Datumsspalte:", filtered_df[["Datum", "Datum_Formatted"]].head())
+                    except Exception as e:
+                        st.error(f"Fehler bei der Verarbeitung der Datumsspalte: {e}")
+                else:
+                    st.warning(f"Die Spalte 'Datum' fehlt in der Datei {uploaded_file.name}")
+                    continue
 
+                if filtered_df.empty:
+                    st.warning(f"Keine passenden Daten im Blatt 'Touren' der Datei {uploaded_file.name} gefunden.")
+                    continue
 
                 # Extrahiere relevante Spalten
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
@@ -383,6 +387,7 @@ else:
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
+
 
 if __name__ == "__main__":
     main()
