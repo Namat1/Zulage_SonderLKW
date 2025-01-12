@@ -89,7 +89,6 @@ name_to_personalnummer = {
 }
 
 
-
 def apply_styles(sheet):
     """
     Formatierung der Excel-Daten. Kopfzeilen und Datenzeilen werden separat behandelt.
@@ -98,7 +97,7 @@ def apply_styles(sheet):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-       header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
@@ -190,9 +189,6 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         for col in range(start_col, start_col + 3):
             if sheet.cell(row=row, column=col).value is None:
                 sheet.cell(row=row, column=col).border = thin_border
-
-# Erste Zeile ausblenden
-    sheet.row_dimensions[1].hidden = True
 
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
