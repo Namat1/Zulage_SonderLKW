@@ -99,7 +99,7 @@ def apply_styles(sheet):
     header_fill = PatternFill(start_color="92BDF9", end_color="92BDF9", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-    name_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    name_fill = PatternFill(start_color="FFD966", end_color="FFD966", fill_type="solid")  # Gelb für Namen
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
@@ -110,6 +110,7 @@ def apply_styles(sheet):
                 cell.font = Font(bold=True, size=12)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
+
         elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
             for cell in row:
                 cell.fill = total_fill
@@ -118,26 +119,19 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
-        elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
+
         elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
             for cell in row:
                 if cell.column == 1:  # Nur die Zelle mit dem Namen formatieren
-                    cell.fill = PatternFill(start_color="FFD966", end_color="FFD966", fill_type="solid")  # Gelber Hintergrund
-                    cell.font = Font(bold=True, size=12, color="000000")  # Schwarze, fette Schrift
+                    cell.fill = name_fill
+                    cell.font = Font(bold=True, size=12, color="000000")  # Schwarze Schrift
                     cell.alignment = Alignment(horizontal="left", vertical="center")
-                else:  # Andere Zellen in der Zeile normal formatieren
+                else:  # Andere Zellen normal formatieren
                     cell.fill = data_fill
                     cell.font = Font(size=11)
                     cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
 
-            for cell in row:
-                cell.fill = name_fill
-                cell.font = Font(bold=True, size=11)
-                cell.alignment = Alignment(horizontal="right", vertical="center")
-                cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für Gesamtverdienst
-                    cell.number_format = '#,##0.00 €'
         else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
@@ -159,8 +153,9 @@ def apply_styles(sheet):
         col_letter = get_column_letter(col[0].column)
         sheet.column_dimensions[col_letter].width = max_length + 3
 
- # Erste Zeile ausblenden
+    # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
+
 
 
 
