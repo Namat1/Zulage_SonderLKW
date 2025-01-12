@@ -127,7 +127,7 @@ def apply_styles(sheet):
             if row_idx == 3:
                 for cell in row:
                     cell.fill = special_fill
-                    cell.font = Font(bold=True, size=14, color="FFFFFF", name="Arial")  # Auffällige Schrift
+                    cell.font = Font(bold=True, size=30, color="FFFFFF", name="Arial")  # Auffällige Schrift
                     cell.alignment = Alignment(horizontal="center", vertical="center")
                     cell.border = Border(
                         left=Side(style='medium'), right=Side(style='medium'),
