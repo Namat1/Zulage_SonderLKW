@@ -5,8 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-
-# Personalnummer-Zuordnung
+# Personalnummer-Zuordnung (verkürzt für die Übersicht)
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
@@ -90,16 +89,15 @@ name_to_personalnummer = {
 }
 
 
+
 def apply_styles(sheet):
     """
-    Formatierung für die Hauptdaten im Sheet, begrenzt auf Spalten A bis E, 
-    und automatische Anpassung der Spaltenbreite mit +1 für alle Spalten außer A.
+    Formatierung der Excel-Daten. Kopfzeilen und Datenzeilen werden separat behandelt.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
@@ -107,7 +105,13 @@ def apply_styles(sheet):
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        if "Gesamtverdienst" in first_cell_value:
+        if row_idx == 2:  # Kopfzeile formatieren
+            for cell in row:
+                cell.fill = header_fill
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = thin_border
+        elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True)
@@ -115,56 +119,18 @@ def apply_styles(sheet):
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0.00 €'
-
-        elif first_cell_value and any(char.isalpha() for char in first_cell_value) and not "Datum" in first_cell_value:
-            try:
-                vorname, nachname = first_cell_value.split(" ", 1)
-                vorname = "".join(vorname.strip().split()).title()
-                nachname = "".join(nachname.strip().split()).title()
-                personalnummer = (
-                    name_to_personalnummer.get(nachname, {}).get(vorname)
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace("-", " "))
-                    or name_to_personalnummer.get(nachname, {}).get(vorname.replace(" ", "-"))
-                    or "Unbekannt"
-                )
-            except ValueError:
-                personalnummer = "Unbekannt"
-
-            sheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-            row[0].value = f"{first_cell_value} - {personalnummer}"
-            row[0].fill = name_fill
-            row[0].font = Font(bold=True)
-            row[0].alignment = Alignment(horizontal="center")
-            for cell in row:
-                cell.border = thin_border
-
-        elif "Datum" in first_cell_value:
-            for cell in row:
-                cell.fill = header_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
-                cell.border = thin_border
-
-        else:
+        else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(bold=False)
                 cell.alignment = Alignment(horizontal="right")
                 cell.border = thin_border
-                if cell.column == 5 and isinstance(cell.value, (int, float)):
-                    cell.number_format = '#,##0.00 €'
 
-    # Automatische Spaltenbreitenanpassung für alle Spalten
+    # Spaltenbreiten automatisch anpassen
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        if col_letter == "A":
-            sheet.column_dimensions[col_letter].width = 17  # Feste Breite für Spalte A
-        else:
-            sheet.column_dimensions[col_letter].width = max_length + 1  # +1 für alle anderen Spalten
-
-    # Erste Zeile ausblenden
-    sheet.row_dimensions[1].hidden = True
+        sheet.column_dimensions[col_letter].width = max_length + 2
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
@@ -177,7 +143,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    
+
     # Monatsname in Zeile 2
     auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat: Unbekannt"
     auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
@@ -196,51 +162,34 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = thin_border
 
-    # Maximale Zeilen- und Spaltenanzahl bestimmen
-    max_rows = len(summary_data) + 4  # Header + Daten + Gesamtverdienst
-    max_cols = start_col + 2          # Name, Personalnummer, Gesamtverdienst
-
     # Einfügen der Daten
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
-        # Name
-        name_cell = sheet.cell(row=i, column=start_col, value=name)
-        name_cell.border = thin_border
-
-        # Personalnummer als Zahl darstellen
+        sheet.cell(row=i, column=start_col, value=name).border = thin_border
         personalnummer_cell = sheet.cell(row=i, column=start_col + 1)
         if personalnummer.isdigit():
-            numeric_personalnummer = int(personalnummer)  # Konvertieren in Zahl
-            personalnummer_cell.value = numeric_personalnummer
-            personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
+            personalnummer_cell.value = int(personalnummer)
+            personalnummer_cell.number_format = '00000000'
         else:
-            personalnummer_cell.value = personalnummer  # Bei "Unbekannt" oder anderen Texten
+            personalnummer_cell.value = personalnummer
         personalnummer_cell.border = thin_border
-
-        # Gesamtverdienst
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
         total_cell.number_format = '#,##0.00 €'
         total_cell.border = thin_border
 
     # Gesamtsumme aller Verdienste
-    total_row = max_rows
+    total_row = len(summary_data) + 4
     sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True)
-    sheet.cell(row=total_row, column=start_col).alignment = Alignment(horizontal="right")
-    sheet.cell(row=total_row, column=start_col).border = thin_border
-
-    total_sum = sum(total for _, _, total in summary_data)
-    total_sum_cell = sheet.cell(row=total_row, column=max_cols, value=total_sum)
+    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
     total_sum_cell.font = Font(bold=True)
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
 
     # Leere Zellen mit Rahmen versehen
-    for row in range(4, max_rows + 1):
-        for col in range(start_col, max_cols + 1):
-            cell = sheet.cell(row=row, column=col)
-            if cell.value is None:
-                cell.border = thin_border
-
+    for row in range(4, total_row + 1):
+        for col in range(start_col, start_col + 3):
+            if sheet.cell(row=row, column=col).value is None:
+                sheet.cell(row=row, column=col).border = thin_border
 
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
@@ -295,18 +244,30 @@ def main():
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
                             sheet_data = []
-                            for _, row in month_data.iterrows():
-                                sheet_data.append([
-                                    row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),  # Datum formatieren
-                                    row["Tour"],
-                                    row["LKW"],
-                                    row["Art"],
-                                    row["Verdienst"]
-                                ])
-                            sheet_df = pd.DataFrame(sheet_data, columns=["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                            summary_data = []
+                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                                total_earnings = group["Verdienst"].sum()
+                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
+
+                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
+                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                                for _, row in group.iterrows():
+                                    sheet_data.append([
+                                        row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),
+                                        row["Tour"],
+                                        row["LKW"],
+                                        row["Art"],
+                                        row["Verdienst"]
+                                    ])
+                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                                sheet_data.append([])
+
+                            sheet_df = pd.DataFrame(sheet_data)
                             sheet_name = f"{calendar.month_name[month]} {year}"
                             sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])
                             sheet = writer.sheets[sheet_name[:31]]
+                            add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
                             apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
