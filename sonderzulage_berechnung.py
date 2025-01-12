@@ -352,7 +352,7 @@ with open(output_file, "rb") as file:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-                    )
+                    
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
 
