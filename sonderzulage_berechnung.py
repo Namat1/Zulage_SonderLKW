@@ -134,10 +134,17 @@ def apply_styles(sheet):
                 # Setze das Euro-Zeichen für die Spalte "Verdienst" (Spalte 5)
                 if cell.column == 5:
                     try:
-                        cell.value = float(cell.value)  # Stelle sicher, dass es sich um einen numerischen Wert handelt
+                        cell.value = float(cell.value)  # Konvertiere den Wert in einen numerischen Typ
                         cell.number_format = '#,##0.00 €'
                     except (ValueError, TypeError):
                         pass  # Ignoriere nicht-numerische Werte
+
+    # Spaltenbreiten automatisch anpassen
+    for col in sheet.columns:
+        max_length = max(len(str(cell.value) or "") for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        sheet.column_dimensions[col_letter].width = max_length + 3
+
 
 
 
@@ -198,6 +205,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         for col in range(start_col, start_col + 3):
             if sheet.cell(row=row, column=col).value is None:
                 sheet.cell(row=row, column=col).border = thin_border
+
 
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
