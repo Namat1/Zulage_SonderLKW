@@ -23,6 +23,8 @@ def format_date(date):
     return date.strftime(f"%d.%m.%Y ({day_of_week}, KW{week_number})")
 
 # Formatierung anwenden
+print(filtered_df.columns)
+
 filtered_df["Datum"] = filtered_df["Datum"].apply(format_date)
 
 
