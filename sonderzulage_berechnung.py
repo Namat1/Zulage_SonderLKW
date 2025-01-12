@@ -99,7 +99,7 @@ def apply_styles(sheet):
     header_fill = PatternFill(start_color="92BDF9", end_color="92BDF9", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-    name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
+    name_fill = PatternFill(start_color="ABB6C7", end_color="ABB6C7", fill_type="solid")
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
