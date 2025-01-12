@@ -5,7 +5,16 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime
-import locale
+
+# Manuelles Mapping für deutsche Wochentage
+german_weekdays = {
+    "Monday": "Montag",
+    "Tuesday": "Dienstag",
+    "Wednesday": "Mittwoch",
+    "Thursday": "Donnerstag",
+    "Friday": "Freitag",
+    "Saturday": "Samstag",
+    "Sunday": "Sonntag"
 
 def format_date(date):
     """
@@ -13,11 +22,11 @@ def format_date(date):
     """
     if pd.isnull(date):
         return ""
-    locale.setlocale(locale.LC_TIME, "de_DE.utf8")  # Deutsche Wochentage und Monate
-    day_of_week = date.strftime("%A")  # Wochentag
+    day_of_week = german_weekdays[date.strftime("%A")]  # Wochentag auf Deutsch
     week_number = date.isocalendar()[1]  # Kalenderwoche
     formatted_date = date.strftime(f"%d.%m.%Y ({day_of_week}, KW{week_number})")
     return formatted_date
+
 
 # Personalnummer-Zuordnung
 name_to_personalnummer = {
@@ -262,6 +271,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
 
 
+# Hauptfunktion
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
@@ -284,7 +294,10 @@ def main():
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["Datum"] = extracted_data["Datum"].apply(format_date)
+
+                # Formatierte und originale Datumsspalte speichern
+                extracted_data["Datum_Original"] = extracted_data["Datum"]
+                extracted_data["Datum"] = extracted_data["Datum_Original"].apply(format_date)
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
@@ -297,8 +310,8 @@ def main():
                     return earnings
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = extracted_data["Datum"].dt.month
-                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
+                extracted_data["Monat"] = extracted_data["Datum_Original"].dt.month
+                extracted_data["Jahr"] = extracted_data["Datum_Original"].dt.year
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
@@ -347,8 +360,6 @@ def main():
                             sheet_df.to_excel(writer, index=False, sheet_name=month_name[:31])
 
                             sheet = writer.sheets[month_name[:31]]
-                            add_summary(sheet, summary_data, start_col=9, month_name=month_name)
-
                             apply_styles(sheet)
 
                 with open(output_file, "rb") as file:
@@ -361,6 +372,9 @@ def main():
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
 
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
