@@ -90,7 +90,7 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Daten, einschließlich Euro-Zeichen für Verdienste.
+    Optische Formatierung der Excel-Daten, einschließlich separater Formatierung für die erste Zeile der Namen-Zeilen.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -99,6 +99,7 @@ def apply_styles(sheet):
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
+    first_name_fill = PatternFill(start_color="FFDD93", end_color="FFDD93", fill_type="solid")  # Separates Styling
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
@@ -113,8 +114,18 @@ def apply_styles(sheet):
                 if cell.column == 5:  # Euro-Format für Gesamtverdienst
                     cell.number_format = '#,##0.00 €'
 
-        # Namen-Zeilen formatieren (einschließlich Zeile 2)
-        elif row_idx >= 2 and first_cell_value:  
+        # Erste Zeile der Namen-Zeilen separat formatieren
+        elif row_idx == 2 and first_cell_value:
+            for cell in row:
+                cell.fill = first_name_fill  # Spezielles Styling
+                cell.font = Font(bold=True, size=12, italic=True)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = thin_border
+                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                    cell.number_format = '#,##0.00 €'
+
+        # Übrige Namen-Zeilen formatieren
+        elif row_idx > 2 and first_cell_value:
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True, size=11)
@@ -144,6 +155,7 @@ def apply_styles(sheet):
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
         sheet.column_dimensions[col_letter].width = max_length + 3
+
 
 
  # Erste Zeile ausblenden
