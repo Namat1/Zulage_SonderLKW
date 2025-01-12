@@ -23,7 +23,12 @@ def format_date(date):
     return date.strftime(f"%d.%m.%Y ({day_of_week}, KW{week_number})")
 
 # Formatierung anwenden
-print(filtered_df.columns)
+if "Datum" in filtered_df.columns:
+    filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
+    filtered_df = filtered_df[filtered_df["Datum"].notnull()]
+    filtered_df["Datum"] = filtered_df["Datum"].apply(format_date)
+else:
+    print("Spalte 'Datum' nicht in der DataFrame gefunden.")
 
 filtered_df["Datum"] = filtered_df["Datum"].apply(format_date)
 
