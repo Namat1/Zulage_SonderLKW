@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-# Personalnummer-Zuordnung (verkürzt für die Übersicht)
+# Personalnummer-Zuordnung (verkürzt)
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
@@ -91,7 +91,7 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Formatierung der Excel-Daten. Kopfzeilen und Datenzeilen werden separat behandelt.
+    Optische Formatierung der Excel-Datei, einschließlich Kopfzeilen, Datenzeilen und Gesamtverdienst.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -100,6 +100,7 @@ def apply_styles(sheet):
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    name_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
@@ -107,34 +108,41 @@ def apply_styles(sheet):
         if row_idx == 2:  # Kopfzeile formatieren
             for cell in row:
                 cell.fill = header_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
+                cell.font = Font(bold=True, size=12)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
         elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
             for cell in row:
                 cell.fill = total_fill
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="right")
+                cell.font = Font(bold=True, size=11)
+                cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
                 if cell.column == 5 and isinstance(cell.value, (int, float)):
                     cell.number_format = '#,##0.00 €'
+        elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
+            for cell in row:
+                cell.fill = name_fill
+                cell.font = Font(bold=True, size=11)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = thin_border
         else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
-                cell.font = Font(bold=False)
-                cell.alignment = Alignment(horizontal="right")
+                cell.font = Font(size=11)
+                cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
+                if cell.column == 5 and isinstance(cell.value, (int, float)):
+                    cell.number_format = '#,##0.00 €'
 
     # Spaltenbreiten automatisch anpassen
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        sheet.column_dimensions[col_letter].width = max_length + 2
+        sheet.column_dimensions[col_letter].width = max_length + 3
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassungstabelle in das Sheet ein, inklusive vollständigem Grid (auch für leere Zellen)
-    und stellt Personalnummern als Zahlen mit führenden Nullen dar.
+    Fügt eine Zusammenfassung der Daten hinzu, mit optischer Hervorhebung und Euro-Zeichen.
     """
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
@@ -156,7 +164,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
         cell = sheet.cell(row=3, column=idx)
         cell.value = header
-        cell.font = Font(bold=True)
+        cell.font = Font(bold=True, size=12)
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = thin_border
@@ -177,9 +185,9 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
     # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
-    sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True)
+    sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True, size=12)
     total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
-    total_sum_cell.font = Font(bold=True)
+    total_sum_cell.font = Font(bold=True, size=12)
     total_sum_cell.fill = total_fill
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
