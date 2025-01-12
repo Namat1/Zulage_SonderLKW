@@ -90,62 +90,59 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Daten, einschließlich Verbinden der ersten Zeile
-    und Hinzufügen der Personalnummer.
+    Optische Formatierung der Excel-Daten, einschließlich Euro-Zeichen für Verdienste.
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
     header_fill = PatternFill(start_color="92BDF9", end_color="92BDF9", fill_type="solid")
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        # Erste Zeile verbinden und Personalnummer hinzufügen
-        if row_idx == 1:
-            try:
-                vorname, nachname = first_cell_value.split()
-                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                name_with_personalnummer = f"{vorname} {nachname} ({personalnummer})"
-            except ValueError:
-                name_with_personalnummer = first_cell_value  # Falls keine Trennung möglich
-
-            # Zellen verbinden
-            sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=5)
-            name_cell = sheet.cell(row=1, column=1)
-            name_cell.value = name_with_personalnummer
-            name_cell.fill = name_fill
-            name_cell.font = Font(bold=True, size=12, color="FFFFFF")
-            name_cell.alignment = Alignment(horizontal="center", vertical="center")
-            name_cell.border = thin_border
-
-        # Kopfzeile formatieren
-        elif row_idx == 2:
+        if row_idx == 2:  # Kopfzeile formatieren
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True, size=12)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
-
-        # Datenzeilen formatieren
-        elif row_idx > 2 and first_cell_value:
+                
+        elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
+            for cell in row:
+                cell.fill = total_fill
+                cell.font = Font(bold=True, size=11)
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.border = thin_border
+                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                    cell.number_format = '#,##0.00 €'
+                    
+        elif row_idx > 2 and first_cell_value:  # Name-Zeilen formatieren
+            for cell in row:
+                cell.fill = name_fill
+                cell.font = Font(bold=True, size=11)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = thin_border
+                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                    cell.number_format = '#,##0.00 €'
+                    
+        else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
 
-                # Euro-Format für Gesamtverdienst (Spalte 5)
+                # Setze das Euro-Zeichen für die Spalte "Verdienst" (Spalte 5)
                 if cell.column == 5:
                     try:
-                        cell.value = float(cell.value)  # Konvertiere in numerischen Typ
+                        cell.value = float(cell.value)  # Konvertiere den Wert in einen numerischen Typ
                         cell.number_format = '#,##0.00 €'
                     except (ValueError, TypeError):
-                        pass
+                        pass  # Ignoriere nicht-numerische Werte
 
     # Spaltenbreiten automatisch anpassen
     for col in sheet.columns:
@@ -157,6 +154,19 @@ def apply_styles(sheet):
     sheet.row_dimensions[1].hidden = True
 
 
+def format_date_with_german_weekday(date):
+    wochentage_mapping = {
+        "Monday": "Montag",
+        "Tuesday": "Dienstag",
+        "Wednesday": "Mittwoch",
+        "Thursday": "Donnerstag",
+        "Friday": "Freitag",
+        "Saturday": "Samstag",
+        "Sunday": "Sonntag"
+    }
+    english_weekday = date.strftime("%A")  # Englischer Wochentag
+    german_weekday = wochentage_mapping.get(english_weekday, english_weekday)  # Übersetzung
+    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW%W)")
 
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
@@ -280,13 +290,15 @@ def main():
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
+                                    formatted_date = format_date_with_german_weekday(row["Datum"])
                                     sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y (%A, KW%W)"),
+                                        formatted_date,
                                         row["Tour"],
                                         row["LKW"],
                                         row["Art"],
                                         row["Verdienst"]
                                     ])
+
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
                                 sheet_data.append([])
 
