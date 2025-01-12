@@ -5,6 +5,17 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
+# Mapping der Wochentage ins Deutsche
+german_weekdays = {
+    "Monday": "Montag",
+    "Tuesday": "Dienstag",
+    "Wednesday": "Mittwoch",
+    "Thursday": "Donnerstag",
+    "Friday": "Freitag",
+    "Saturday": "Samstag",
+    "Sunday": "Sonntag"
+}
+
 # Personalnummer-Zuordnung
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
