@@ -129,7 +129,7 @@ def apply_styles(sheet):
         else:  # Datenzeilen formatieren
             for cell in row:
                 cell.fill = data_fill
-                cell.font = Font(size=8)
+                cell.font = Font(size=25)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
 
