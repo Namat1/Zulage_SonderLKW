@@ -90,8 +90,8 @@ name_to_personalnummer = {
 
 def apply_styles(sheet):
     """
-    Optische Formatierung der Excel-Daten, einschließlich verbundenem Namensfeld mit Personalnummer,
-    aber nur für die Namenszeilen.
+    Optische Formatierung der Excel-Daten, einschließlich verbundenem Namensfeld mit Personalnummer
+    nur für die Namenszeilen (Zeilen mit Text in der ersten Spalte).
     """
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -105,21 +105,26 @@ def apply_styles(sheet):
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        if row_idx == 2:  # Kopfzeile formatieren
+        # Kopfzeile formatieren
+        if row_idx == 2:
             for cell in row:
                 cell.fill = header_fill
                 cell.font = Font(bold=True, size=12)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
-        elif "Gesamtverdienst" in first_cell_value:  # Gesamtverdienst-Zeilen
+
+        # "Gesamtverdienst"-Zeilen formatieren
+        elif "Gesamtverdienst" in first_cell_value:
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True, size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
-        elif row_idx > 2 and first_cell_value:  # Namenszeilen formatieren
+
+        # Namenszeilen formatieren und verbinden (nur wenn erster Wert ein Name ist)
+        elif row_idx > 2 and first_cell_value and not first_cell_value.isdigit():
             # Ermitteln von Vorname und Nachname aus dem Text
             try:
                 vorname, nachname = first_cell_value.split()
@@ -136,7 +141,9 @@ def apply_styles(sheet):
             name_cell.font = Font(bold=True, size=11, color="FFFFFF")
             name_cell.alignment = Alignment(horizontal="center", vertical="center")
             name_cell.border = thin_border
-        else:  # Alle anderen Zeilen formatieren
+
+        # Datenzeilen formatieren
+        else:
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(size=11)
@@ -159,6 +166,7 @@ def apply_styles(sheet):
 
     # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
+
 
 
 
