@@ -294,8 +294,7 @@ def main():
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
                 # Konvertiere Datum und wende die Formatierung an
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-                extracted_data["Datum"] = extracted_data["Datum"].apply(format_date)
-
+                extracted_data["Datum_Formatted"] = extracted_data["Datum"].apply(format_date)
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
@@ -345,7 +344,7 @@ def main():
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
                                     sheet_data.append([
-                                        row["Datum"].strftime("%d.%m.%Y"),
+                                        row["Datum_Formatted"],  # Verwende das formatierte Datum
                                         row["Tour"],
                                         row["LKW"],
                                         row["Art"],
