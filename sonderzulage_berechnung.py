@@ -361,11 +361,10 @@ def main():
                     except Exception as e:
                         st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
-                # Daten für Download speichern
-                if not all_data.empty:
-                    st.success("Daten erfolgreich verarbeitet und Excel-Datei erstellt!")
-                else:
-                    st.warning("Keine passenden Daten gefunden.")
+                # Wenn keine sichtbaren Blätter vorhanden sind, füge ein Standardblatt hinzu
+                if not writer.book.sheetnames:
+                    default_sheet = writer.book.create_sheet(title="Keine Daten")
+                    default_sheet.cell(1, 1).value = "Keine passenden Daten für die Verarbeitung gefunden."
 
             # Datei als Download-Option bereitstellen
             with open(output_file, "rb") as file:
