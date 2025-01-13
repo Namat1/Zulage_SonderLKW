@@ -342,7 +342,8 @@ def main():
             try:
                 # Excel-Datei einlesen
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                # Daten filtern (AZ in einer Spalte)
+
+                # Daten filtern (nur Zeilen mit "AZ" in einer bestimmten Spalte)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
@@ -360,7 +361,7 @@ def main():
                 # Präfix "E-" vor jede Nummer in der Spalte "LKW" setzen
                 extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
 
-                # Spalte "Art" basierend auf den Fahrzeugnummern definieren
+                # Spalte "Art" basierend auf Fahrzeugnummern definieren
                 extracted_data["Art"] = extracted_data["LKW"].apply(
                     lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
                 )
@@ -373,13 +374,22 @@ def main():
 
                 # Verdienst berechnen
                 def calculate_earnings(row):
-                    lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
                     earnings = 0
+                    lkw_values = [
+                        row["LKW1"],
+                        row["LKW"].split("-")[1] if pd.notnull(row["LKW"]) and "-" in row["LKW"] else None,
+                        row["Art"]
+                    ]
                     for value in lkw_values:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520]:
-                            earnings += 20
+                        try:
+                            # Konvertiere den Wert in eine Zahl (wenn möglich)
+                            numeric_value = int(value) if isinstance(value, str) and value.isdigit() else value
+                            if numeric_value in [602, 156]:
+                                earnings += 40
+                            elif numeric_value in [620, 350, 520]:
+                                earnings += 20
+                        except (ValueError, TypeError):
+                            continue  # Überspringe ungültige Werte
                     return earnings
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
@@ -442,6 +452,7 @@ def main():
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
+
 
 
 
