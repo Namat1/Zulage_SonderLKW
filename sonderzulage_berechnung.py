@@ -392,6 +392,18 @@ def main():
                                 # Gruppendaten zusammenstellen
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                                # Spalte "Art" basierend auf den Fahrzeugnummern definieren
+                                def define_art(value):
+                                    if value in [602, 156]:
+                                       return "Gigaliner"
+                                    elif value in [350, 620]:
+                                       return "Tandem"
+                                    elif value == 520:
+                                       return "Gliederzug"
+                                    return "Unbekannt"
+
+# "Art" für die Spalte "LKW" festlegen
+extracted_data["Art"] = extracted_data["LKW"].apply(define_art)
                                 for _, row in group.iterrows():
                                     formatted_date = format_date_with_german_weekday(row["Datum"])
                                     sheet_data.append([
