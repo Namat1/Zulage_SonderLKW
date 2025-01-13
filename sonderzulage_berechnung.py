@@ -243,6 +243,8 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         personalnummer_cell.font = Font(bold=True, size=12)
         personalnummer_cell.fill = personalnummer_fill
         personalnummer_cell.border = thin_border
+        personalnummer_cell.number_format = '00000000'  # Acht Stellen, inklusive führender Nullen
+
 
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
         total_cell.font = Font(bold=True, size=12)
