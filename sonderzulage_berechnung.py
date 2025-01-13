@@ -22,6 +22,7 @@ def get_german_month_name(month_number):
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
+    "Bartelt": {"Marcel": "000"},
     "Batkowski": {"Tilo": "00046601"},
     "Benabbes": {"Badr": "00048980"},
     "Biebow": {"Thomas": "00042004"},
@@ -75,6 +76,7 @@ name_to_personalnummer = {
     "Ohms": {"Torsten": "00019300"},
     "Okoth": {"Tedy Omondi": "00046107"},
     "Oszmian": {"Jacub": "00039464"},
+    "Paul": {"Toralf": "000"},
     "Pabst": {"Torsten": "00021976"},
     "Pawlak": {"Bartosz": "00036381"},
     "Piepke": {"Torsten": "00021390"},
