@@ -228,6 +228,15 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     auszahlung_month_cell.fill = header_fill
     auszahlung_month_cell.border = thin_border
 
+    # Dritte Zelle - Farbliche Formatierung wie die zweite
+    auszahlung_third_cell = sheet.cell(row=2, column=start_col + 2, value="")
+    auszahlung_third_cell.font = Font(bold=True, size=12)
+    auszahlung_third_cell.alignment = Alignment(horizontal="left", vertical="center")
+    auszahlung_third_cell.fill = header_fill
+    auszahlung_third_cell.border = thin_border
+
+
+
 
     # Zusammenfassungskopfzeilen
     for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
