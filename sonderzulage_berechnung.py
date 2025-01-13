@@ -112,7 +112,7 @@ def apply_styles(sheet):
     total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
-    first_block_fill = PatternFill(start_color="FFDD93", end_color="FFDD93", fill_type="solid")  # Separates Styling für erste Zeilen
+    first_block_fill = PatternFill(start_color="E1E821", end_color="E1E821", fill_type="solid")  # Separates Styling für erste Zeilen
 
     is_first_in_block = True  # Markiert die erste Zeile eines Blocks
 
