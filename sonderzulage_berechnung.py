@@ -248,14 +248,26 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
 
 
-    # Zusammenfassungskopfzeilen
+    # Farben für jede Überschrift
+    header_colors = {
+        "Name": "C7B7B3",  
+        "Personalnummer": "C7B7B3",  
+        "Gesamtverdienst (€)": "C7B7B3"  
+    }
+
+    # Zusammenfassungskopfzeilen mit individuellen Farben
     for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
         cell = sheet.cell(row=3, column=idx)
         cell.value = header
         cell.font = Font(bold=True, size=12)
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = thin_border
+    
+    # Farbe aus dem Dictionary anwenden
+    color = header_colors.get(header, "FFFFFF")  # Standardfarbe Weiß, falls nicht definiert
+    cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+    
+    cell.alignment = Alignment(horizontal="center", vertical="center")
+    cell.border = thin_border
+
 
     # Sortiere die Zusammenfassung nach Gesamtverdienst (€)
     summary_data.sort(key=lambda x: x[2], reverse=True)  # Absteigende Sortierung nach Verdienst
