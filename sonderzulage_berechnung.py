@@ -262,7 +262,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         cell.font = Font(bold=True, size=12)
     
     # Farbe aus dem Dictionary anwenden
-    color = header_colors.get(header, "FFFFFF")  # Standardfarbe Weiß, falls nicht definiert
+    color = header_colors.get(header, "C7B7B3")  # Standardfarbe Weiß, falls nicht definiert
     cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
     
     cell.alignment = Alignment(horizontal="center", vertical="center")
