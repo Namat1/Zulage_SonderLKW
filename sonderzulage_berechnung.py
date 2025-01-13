@@ -269,12 +269,17 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
     # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
-    sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").font = Font(bold=True, size=12)
-    total_sum_cell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
-    total_sum_cell.font = Font(bold=True, size=12)
-    total_sum_cell.fill = total_fill
-    total_sum_cell.number_format = '#,##0.00 €'
-    total_sum_cell.border = thin_border
+    for col in range(start_col, start_col + 3):  # Alle drei Spalten formatieren
+        total_sum_cell = sheet.cell(row=total_row, column=col)
+        if col == start_col:  # Erste Spalte: Label "Gesamtsumme"
+            total_sum_cell.value = "Gesamtsumme"
+        elif col == start_col + 2:  # Dritte Spalte: Summe der Verdienste
+            total_sum_cell.value = sum(x[2] for x in summary_data)
+            total_sum_cell.number_format = '#,##0.00 €'
+        total_sum_cell.font = Font(bold=True, size=12)
+        total_sum_cell.fill = total_fill
+        total_sum_cell.border = thin_border
+
 
     # Leere Zellen mit Rahmen versehen und vollständiges Raster anwenden
     max_row = len(summary_data) + 4  # Letzte Zeile der Zusammenfassung
