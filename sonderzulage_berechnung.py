@@ -329,7 +329,9 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
+                # Excel-Datei einlesen
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
+                # Daten filtern (AZ in einer Spalte)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
@@ -339,20 +341,26 @@ def main():
                     st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
+                # Relevante Spalten extrahieren
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                # E- vor jede Nummer in der Spalte "LKW" setzen
+
+                # Präfix "E-" vor jede Nummer in der Spalte "LKW" setzen
                 extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
+
+                # Spalte "Art" basierend auf den Fahrzeugnummern definieren
+                extracted_data["Art"] = extracted_data["LKW"].apply(
+                    lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
+                )
+
+                # Spalte "Datum" in datetime umwandeln
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
                 # Falls "Tour" leer ist, nutze Spalte Q (Index 16 in Python)
                 extracted_data['Tour'] = extracted_data['Tour'].fillna(filtered_df.iloc[:, 16])
 
-
-               
-
-
+                # Verdienst berechnen
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
                     earnings = 0
@@ -392,18 +400,6 @@ def main():
                                 # Gruppendaten zusammenstellen
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                # Spalte "Art" basierend auf den Fahrzeugnummern definieren
-                                def define_art(value):
-                                    if value in [602, 156]:
-                                       return "Gigaliner"
-                                    elif value in [350, 620]:
-                                       return "Tandem"
-                                    elif value == 520:
-                                       return "Gliederzug"
-                                    return "Unbekannt"
-
-# "Art" für die Spalte "LKW" festlegen
-extracted_data["Art"] = extracted_data["LKW"].apply(define_art)
                                 for _, row in group.iterrows():
                                     formatted_date = format_date_with_german_weekday(row["Datum"])
                                     sheet_data.append([
@@ -435,6 +431,7 @@ extracted_data["Art"] = extracted_data["LKW"].apply(define_art)
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
+
 
 
 if __name__ == "__main__":
