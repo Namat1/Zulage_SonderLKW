@@ -259,11 +259,21 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
 
-    # Leere Zellen mit Rahmen versehen
-    for row in range(4, total_row + 1):
-        for col in range(start_col, start_col + 3):
-            if sheet.cell(row=row, column=col).value is None:
-                sheet.cell(row=row, column=col).border = thin_border
+    # Leere Zellen mit Rahmen versehen und vollständiges Raster anwenden
+    max_row = len(summary_data) + 4  # Letzte Zeile der Zusammenfassung
+    for row in range(3, max_row + 1):
+        for col in range(start_col, start_col + 3):  # Spaltenbereich der Zusammenfassung
+            cell = sheet.cell(row=row, column=col)
+            if cell.value is None:
+                cell.value = ""  # Füllt leere Zellen mit einem leeren String
+            cell.border = thin_border  # Fügt einen dünnen Rahmen hinzu
+
+    # Anwendung des Rasters auf leere Bereiche unter der Zusammenfassung
+    for col in range(start_col, start_col + 3):
+        for row in range(max_row + 1, max_row + 3):  # Erweiterung unter der Gesamtsumme
+            cell = sheet.cell(row=row, column=col)
+            cell.value = ""
+            cell.border = thin_border
 
 
 
