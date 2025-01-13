@@ -268,12 +268,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
                 cell.value = ""  # Füllt leere Zellen mit einem leeren String
             cell.border = thin_border  # Fügt einen dünnen Rahmen hinzu
 
-    # Anwendung des Rasters auf leere Bereiche unter der Zusammenfassung
-    for col in range(start_col, start_col + 3):
-        for row in range(max_row + 1, max_row + 3):  # Erweiterung unter der Gesamtsumme
-            cell = sheet.cell(row=row, column=col)
-            cell.value = ""
-            cell.border = thin_border
+    
 
 
 
