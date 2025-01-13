@@ -255,17 +255,22 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         name_cell.fill = name_fill
         name_cell.border = thin_border
 
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
-        personalnummer_cell.font = Font(bold=True, size=12)
-        personalnummer_cell.alignment = Alignment(horizontal="right", vertical="center")
-        personalnummer_cell.fill = personalnummer_fill
-        personalnummer_cell.border = thin_border
+    # Personalnummer als Zahl behandeln, wenn sie numerisch ist
+    if personalnummer.isdigit():
+        personalnummer = int(personalnummer)  # Konvertiere zu Integer
 
-        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
-        total_cell.font = Font(bold=True, size=12)
-        total_cell.fill = verdienst_fill
-        total_cell.number_format = '#,##0.00 €'
-        total_cell.border = thin_border
+    personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
+    personalnummer_cell.font = Font(bold=True, size=12)
+    personalnummer_cell.alignment = Alignment(horizontal="right", vertical="center")
+    personalnummer_cell.fill = personalnummer_fill
+    personalnummer_cell.border = thin_border
+
+    total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
+    total_cell.font = Font(bold=True, size=12)
+    total_cell.fill = verdienst_fill
+    total_cell.number_format = '#,##0.00 €'
+    total_cell.border = thin_border
+
 
     # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
