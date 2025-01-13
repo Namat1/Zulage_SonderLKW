@@ -276,28 +276,14 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     total_sum_cell.number_format = '#,##0.00 €'
     total_sum_cell.border = thin_border
 
-    # Leere Zellen mit Rahmen und Farbfüllung wie "Gesamtverdienst" versehen
+    # Leere Zellen mit Rahmen versehen und vollständiges Raster anwenden
     max_row = len(summary_data) + 4  # Letzte Zeile der Zusammenfassung
     for row in range(3, max_row + 1):
         for col in range(start_col, start_col + 3):  # Spaltenbereich der Zusammenfassung
             cell = sheet.cell(row=row, column=col)
-        
-        if cell.value is None:  # Prüfen, ob die Zelle leer ist
-            cell.value = ""  # Füllt leere Zellen mit einem leeren String
-            cell.fill = total_fill  # Färbt leere Zellen mit C7B7B3
-        else:
-            cell.fill = verdienst_fill  # Färbt befüllte Zellen wie "Gesamtverdienst"
-
-        # Einheitliches Format für alle Zellen
-        cell.font = Font(bold=True, size=12)
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal="right", vertical="center")
-        
-        # Nummernformat nur für die dritte Spalte
-        if col == start_col + 2:
-            cell.number_format = '#,##0.00 €'
-
-
+            if cell.value is None:
+                cell.value = ""  # Füllt leere Zellen mit einem leeren String
+            cell.border = thin_border  # Fügt einen dünnen Rahmen hinzu
 
     
 
