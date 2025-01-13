@@ -17,6 +17,17 @@ german_months = [
 def get_german_month_name(month_number):
     return german_months[month_number]
 
+# Funktion zur Definition der Spalte "Art" basierend auf Fahrzeugnummern
+def define_art(value):
+    if value in [602, 156]:
+        return "Gigaliner"
+    elif value in [350, 620]:
+        return "Tandem"
+    elif value == 520:
+        return "Gliederzug"
+    return "Unbekannt"
+
+
 
 # Personalnummer-Zuordnung (verkürzt)
 name_to_personalnummer = {
