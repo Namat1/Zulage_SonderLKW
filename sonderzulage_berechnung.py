@@ -196,7 +196,15 @@ def format_date_with_german_weekday(date):
     }
     english_weekday = date.strftime("%A")  # Englischer Wochentag
     german_weekday = wochentage_mapping.get(english_weekday, english_weekday)  # Übersetzung
-    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW%W)")
+
+    # Original KW berechnen
+    original_kw = int(date.strftime("%W"))
+    
+    # +1 zur Kalenderwoche
+    adjusted_kw = original_kw + 1 if original_kw < 53 else 1
+
+    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{adjusted_kw})")
+
 
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
