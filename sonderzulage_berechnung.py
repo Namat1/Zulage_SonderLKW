@@ -247,6 +247,9 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = thin_border
 
+    # Sortiere die Zusammenfassung nach Gesamtverdienst (€)
+    summary_data.sort(key=lambda x: x[2], reverse=True)  # Absteigende Sortierung nach Verdienst
+
     # Einfügen der Daten mit Farbfüllung
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
         name_cell = sheet.cell(row=i, column=start_col, value=name)
@@ -262,12 +265,12 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         personalnummer_cell.fill = personalnummer_fill
         personalnummer_cell.border = thin_border
 
-
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
         total_cell.font = Font(bold=True, size=12)
         total_cell.fill = verdienst_fill
         total_cell.number_format = '#,##0.00 €'
         total_cell.border = thin_border
+
 
     # Gesamtsumme aller Verdienste
     total_row = len(summary_data) + 4
