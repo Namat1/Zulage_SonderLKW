@@ -109,10 +109,10 @@ def apply_styles(sheet):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
+    total_fill = PatternFill(start_color="1D347A", end_color="1D347A", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-    name_fill = PatternFill(start_color="316FF6", end_color="316FF6", fill_type="solid")
-    first_block_fill = PatternFill(start_color="E1E821", end_color="E1E821", fill_type="solid")  # Separates Styling für erste Zeilen
+    name_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
+    first_block_fill = PatternFill(start_color="7382AD", end_color="7382AD", fill_type="solid")  # Separates Styling für erste Zeilen
 
     is_first_in_block = True  # Markiert die erste Zeile eines Blocks
 
