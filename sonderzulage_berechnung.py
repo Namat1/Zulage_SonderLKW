@@ -234,10 +234,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
     # Einfügen der Daten mit Farbfüllung
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
-    name_cell = sheet.cell(row=i, column=start_col, value=name)
-    name_cell.font = Font(bold=True, size=12)
-    name_cell.fill = name_fill
-    name_cell.border = thin_border
+        name_cell = sheet.cell(row=i, column=start_col, value=name)
+        name_cell.font = Font(bold=True, size=12)
+        name_cell.fill = name_fill
+        name_cell.border = thin_border
 
     # Personalnummer formatieren
     try:
