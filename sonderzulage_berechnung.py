@@ -203,8 +203,8 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     Fügt eine Zusammenfassung der Daten hinzu, mit Euro-Zeichen für Verdienste.
     """
-    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-    total_fill = PatternFill(start_color="DFF7DF", end_color="DFF7DF", fill_type="solid")
+    header_fill = PatternFill(start_color="7382AD", end_color="7382AD", fill_type="solid")
+    total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
