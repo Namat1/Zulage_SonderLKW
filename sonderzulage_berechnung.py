@@ -245,14 +245,11 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     auszahlung_third_cell.fill = header_fill
     auszahlung_third_cell.border = thin_border
 
-
-
-
     # Farben für jede Überschrift
     header_colors = {
-        "Name": "C7B7B3",  
-        "Personalnummer": "C7B7B3",  
-        "Gesamtverdienst (€)": "C7B7B3"  
+        "Name": "C7B7B3",  # Rot
+        "Personalnummer": "C7B7B3",  # Grün
+        "Gesamtverdienst (€)": "C7B7B3"  # Blau
     }
 
     # Zusammenfassungskopfzeilen mit individuellen Farben
@@ -267,6 +264,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     
     cell.alignment = Alignment(horizontal="center", vertical="center")
     cell.border = thin_border
+
 
 
     # Sortiere die Zusammenfassung nach Gesamtverdienst (€)
