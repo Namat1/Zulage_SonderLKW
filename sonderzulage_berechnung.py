@@ -214,14 +214,20 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         top=Side(style='thin'), bottom=Side(style='thin')
     )
 
-    # Monatsname in Zeile 2
-    auszahlung_text = f"Auszahlung Monat: {month_name}" if month_name else "Auszahlung Monat: Unbekannt"
-    auszahlung_cell = sheet.cell(row=2, column=start_col, value=auszahlung_text)
-    sheet.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=start_col + 2)
-    auszahlung_cell.font = Font(bold=True, size=12)
-    auszahlung_cell.alignment = Alignment(horizontal="center", vertical="center")
-    auszahlung_cell.fill = header_fill
-    auszahlung_cell.border = thin_border
+    # Erste Zelle für den Text "Auszahlung Monat:"
+    auszahlung_label_cell = sheet.cell(row=2, column=start_col, value="Auszahlung Monat:")
+    auszahlung_label_cell.font = Font(bold=True, size=12)
+    auszahlung_label_cell.alignment = Alignment(horizontal="right", vertical="center")
+    auszahlung_label_cell.fill = header_fill
+    auszahlung_label_cell.border = thin_border
+
+    # Zweite Zelle für den Monatsnamen
+    auszahlung_month_cell = sheet.cell(row=2, column=start_col + 1, value=month_name if month_name else "Unbekannt")
+    auszahlung_month_cell.font = Font(bold=True, size=12)
+    auszahlung_month_cell.alignment = Alignment(horizontal="left", vertical="center")
+    auszahlung_month_cell.fill = header_fill
+    auszahlung_month_cell.border = thin_border
+
 
     # Zusammenfassungskopfzeilen
     for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
