@@ -201,9 +201,13 @@ def format_date_with_german_weekday(date):
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
-    Fügt eine Zusammenfassung der Daten hinzu, mit Euro-Zeichen für Verdienste.
+    Fügt eine farblich formatierte Zusammenfassung der Daten hinzu.
     """
+    # Farben für Kopfzeile und Spalten
     header_fill = PatternFill(start_color="7382AD", end_color="7382AD", fill_type="solid")
+    name_fill = PatternFill(start_color="FFEEE1", end_color="FFEEE1", fill_type="solid")
+    personalnummer_fill = PatternFill(start_color="E1F7FF", end_color="E1F7FF", fill_type="solid")
+    verdienst_fill = PatternFill(start_color="E1FFE7", end_color="E1FFE7", fill_type="solid")
     total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -228,18 +232,19 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = thin_border
 
-    # Einfügen der Daten
+    # Einfügen der Daten mit Farbfüllung
     for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
-        sheet.cell(row=i, column=start_col, value=name).border = thin_border
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1)
-        if personalnummer.isdigit():
-            personalnummer_cell.value = int(personalnummer)
-            personalnummer_cell.number_format = '00000000'
-        else:
-            personalnummer_cell.value = personalnummer
+        name_cell = sheet.cell(row=i, column=start_col, value=name)
+        name_cell.fill = name_fill
+        name_cell.border = thin_border
+
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
+        personalnummer_cell.fill = personalnummer_fill
         personalnummer_cell.border = thin_border
+
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
-        total_cell.number_format = '#,##0.00 €'  # Korrektes Format für Euro
+        total_cell.fill = verdienst_fill
+        total_cell.number_format = '#,##0.00 €'
         total_cell.border = thin_border
 
     # Gesamtsumme aller Verdienste
@@ -256,6 +261,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         for col in range(start_col, start_col + 3):
             if sheet.cell(row=row, column=col).value is None:
                 sheet.cell(row=row, column=col).border = thin_border
+
 
 
 def main():
