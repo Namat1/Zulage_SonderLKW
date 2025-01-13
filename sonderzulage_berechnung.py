@@ -239,28 +239,19 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         name_cell.fill = name_fill
         name_cell.border = thin_border
 
-    # Prüfen, ob Personalnummer vorhanden ist
-    if personalnummer is None or personalnummer == "Unbekannt":
-        personalnummer = "Unbekannt"  # Fallback für fehlende Personalnummer
-
-    # Personalnummer verarbeiten
-    if personalnummer.isdigit():
-        # Nummerische Personalnummern formatieren
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=int(personalnummer))
-        personalnummer_cell.number_format = '00000000'  # Achtstellige Zahl mit führenden Nullen
-    else:
-        # Nicht-numerische Personalnummern unverändert einfügen
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
-
+    # Personalnummer als Text schreiben
+    personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
     personalnummer_cell.font = Font(bold=True, size=12)
     personalnummer_cell.fill = personalnummer_fill
     personalnummer_cell.border = thin_border
+    personalnummer_cell.number_format = '@'  # Textformatierung
 
     total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
     total_cell.font = Font(bold=True, size=12)
     total_cell.fill = verdienst_fill
     total_cell.number_format = '#,##0.00 €'
     total_cell.border = thin_border
+
 
 
 
