@@ -333,6 +333,9 @@ def main():
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+                # Falls "Tour" leer ist, nutze Spalte 17
+                extracted_data['Tour'] = extracted_data['Tour'].fillna(extracted_data.iloc[:, 17])
+
 
                 def calculate_earnings(row):
                     lkw_values = [row["LKW1"], row["LKW"], row["Art"]]
