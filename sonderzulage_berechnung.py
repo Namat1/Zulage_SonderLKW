@@ -205,9 +205,9 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """
     # Farben für Kopfzeile und Spalten
     header_fill = PatternFill(start_color="7382AD", end_color="7382AD", fill_type="solid")
-    name_fill = PatternFill(start_color="FFEEE1", end_color="FFEEE1", fill_type="solid")
-    personalnummer_fill = PatternFill(start_color="E1F7FF", end_color="E1F7FF", fill_type="solid")
-    verdienst_fill = PatternFill(start_color="E1FFE7", end_color="E1FFE7", fill_type="solid")
+    name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
+    personalnummer_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
+    verdienst_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
     total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -217,7 +217,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     # Erste Zelle für den Text "Auszahlung Monat:"
     auszahlung_label_cell = sheet.cell(row=2, column=start_col, value="Auszahlung Monat:")
     auszahlung_label_cell.font = Font(bold=True, size=12)
-    auszahlung_label_cell.alignment = Alignment(horizontal="right", vertical="center")
+    auszahlung_label_cell.alignment = Alignment(horizontal="center", vertical="center")
     auszahlung_label_cell.fill = header_fill
     auszahlung_label_cell.border = thin_border
 
