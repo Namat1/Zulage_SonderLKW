@@ -255,7 +255,8 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         name_cell.fill = name_fill
         name_cell.border = thin_border
 
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=f"'{personalnummer}")
+        personalnummer_cell.number_format = '@'  # Textformatierung, um führende Nullen zu erhalten
         personalnummer_cell.font = Font(bold=True, size=12)
         personalnummer_cell.alignment = Alignment(horizontal="right", vertical="center")
         personalnummer_cell.fill = personalnummer_fill
