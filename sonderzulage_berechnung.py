@@ -255,12 +255,13 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         name_cell.fill = name_fill
         name_cell.border = thin_border
 
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
-        personalnummer_cell.number_format = '00000000'  # Benutzerdefiniertes Format für führende Nullen
+        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=int(personalnummer))  # Personalnummer als Zahl speichern
+        personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
         personalnummer_cell.font = Font(bold=True, size=12)
         personalnummer_cell.alignment = Alignment(horizontal="right", vertical="center")
         personalnummer_cell.fill = personalnummer_fill
         personalnummer_cell.border = thin_border
+
 
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
         total_cell.font = Font(bold=True, size=12)
