@@ -125,7 +125,7 @@ def apply_styles(sheet):
     total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
-    first_block_fill = PatternFill(start_color="7382AD", end_color="7382AD", fill_type="solid")  # Separates Styling für erste Zeilen
+    first_block_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")  # Separates Styling für erste Zeilen
 
     is_first_in_block = True  # Markiert die erste Zeile eines Blocks
 
@@ -225,7 +225,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     Fügt eine farblich formatierte Zusammenfassung der Daten hinzu.
     """
     # Farben für Kopfzeile und Spalten
-    header_fill = PatternFill(start_color="7382AD", end_color="7382AD", fill_type="solid")
+    header_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
     name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
     personalnummer_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
     verdienst_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
