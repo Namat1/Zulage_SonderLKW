@@ -33,7 +33,6 @@ def define_art(value):
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
-    "Bartelt": {"Marcel": "000"},
     "Batkowski": {"Tilo": "00046601"},
     "Benabbes": {"Badr": "00048980"},
     "Biebow": {"Thomas": "00042004"},
