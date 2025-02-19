@@ -288,10 +288,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         name_cell.fill = name_fill
         name_cell.border = thin_border
 
-    # Fehlerbehandlung für "Unbekannt" oder nicht-numerische Werte
+        # Fehlerbehandlung für "Unbekannt" oder nicht-numerische Werte
         try:
             personalnummer_value = int(personalnummer)
-       except ValueError:
+        except ValueError:
             personalnummer_value = personalnummer  # Falls "Unbekannt" oder Text, bleibt es ein String
 
         personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer_value)
@@ -306,6 +306,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         total_cell.fill = verdienst_fill
         total_cell.number_format = '#,##0.00 €'
         total_cell.border = thin_border
+
 
 
 
