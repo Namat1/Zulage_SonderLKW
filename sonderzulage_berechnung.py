@@ -87,7 +87,7 @@ name_to_personalnummer = {
     "Ohms": {"Torsten": "00019300"},
     "Okoth": {"Tedy Omondi": "00046107"},
     "Oszmian": {"Jacub": "00039464"},
-    "Paul": {"Toralf": "000"},
+    "Paul": {"Toralf": "00010490"},
     "Pabst": {"Torsten": "00021976"},
     "Pawlak": {"Bartosz": "00036381"},
     "Piepke": {"Torsten": "00021390"},
