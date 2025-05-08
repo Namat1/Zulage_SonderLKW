@@ -16,15 +16,20 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=1)  # Nutzt Zeile 2 als Header
+                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=None)
 
-                # Robuster AZ-Filter (Spalte 14/N)
-                if "Frz. Gr." in df.columns:
-                    az_column = df.columns[13]  # Annahme: Spalte 14 = "Frz. Gr." / ähnliche
-                    filtered_df = df[df[az_column].astype(str).str.contains("az", case=False, na=False)]
-                else:
+                # Suche nach AZ-Spalte anhand ihres Inhalts
+                az_spalte = None
+                for col in df.columns:
+                    if df[col].astype(str).str.contains("az", case=False, na=False).any():
+                        az_spalte = col
+                        break
+
+                if az_spalte is None:
                     st.warning("Spalte mit AZ nicht gefunden.")
                     continue
+
+                filtered_df = df[df[az_spalte].astype(str).str.contains("az", case=False, na=False)]
 
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 15], errors="coerce")
