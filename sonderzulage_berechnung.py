@@ -6,44 +6,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-# Deutsche Monatsnamen
-german_months = [
-    "Dummy",
-    "Januar", "Februar", "März", "April", "Mai", "Juni",
-    "Juli", "August", "September", "Oktober", "November", "Dezember"
-]
-
-def get_german_month_name(month_number):
-    return german_months[month_number]
-
-def define_art(value):
-    if value in [602, 156]:
-        return "Gigaliner"
-    elif value in [350, 620]:
-        return "Tandem"
-    elif value == 520:
-        return "Gliederzug"
-    return "Unbekannt"
-
-# (name_to_personalnummer wird hier vorausgesetzt, im Originalcode enthalten)
-# (apply_styles und add_summary ebenfalls vorhanden und oben eingefügt)
-
-def format_date_with_german_weekday(date):
-    wochentage_mapping = {
-        "Monday": "Montag",
-        "Tuesday": "Dienstag",
-        "Wednesday": "Mittwoch",
-        "Thursday": "Donnerstag",
-        "Friday": "Freitag",
-        "Saturday": "Samstag",
-        "Sunday": "Sonntag"
-    }
-    english_weekday = date.strftime("%A")
-    german_weekday = wochentage_mapping.get(english_weekday, english_weekday)
-    original_kw = int(date.strftime("%W"))
-    adjusted_kw = original_kw + 1 if original_kw < 53 else 1
-    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{adjusted_kw})")
-
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
@@ -54,23 +16,33 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\\b(AZ)\\b', na=False)]
+                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=1)  # Nutzt Zeile 2 als Header
+
+                # Robuster AZ-Filter (Spalte 14/N)
+                if "Frz. Gr." in df.columns:
+                    az_column = df.columns[13]  # Annahme: Spalte 14 = "Frz. Gr." / ähnliche
+                    filtered_df = df[df[az_column].astype(str).str.contains("az", case=False, na=False)]
+                else:
+                    st.warning("Spalte mit AZ nicht gefunden.")
+                    continue
+
                 if not filtered_df.empty:
-                    filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+                    filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 15], errors="coerce")
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
-                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
+                columns_to_extract = [0, 3, 4, 10, 11, 12, 15]
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["Kommentar"] = filtered_df.iloc[:, 15]
+                extracted_data["Kommentar"] = filtered_df.iloc[:, 16]  # Spalte P
+
                 extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
                 extracted_data["Art"] = extracted_data["LKW"].apply(lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt")
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
-                extracted_data["Tour"] = extracted_data["Tour"].fillna(filtered_df.iloc[:, 16])
+                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], errors="coerce")
+                extracted_data["Tour"] = extracted_data["Tour"].fillna(filtered_df.iloc[:, 17])
 
                 def calculate_earnings(row):
                     earnings = 0
@@ -91,7 +63,7 @@ def main():
 
                     try:
                         kommentar = str(row.get("Kommentar", "") or "")
-                        if re.search(r"f[\üu]ngers?", kommentar, re.IGNORECASE) or re.search(r"a[-\\s]?haus", kommentar, re.IGNORECASE):
+                        if re.search(r"f[üu]ngers?", kommentar, re.IGNORECASE) or re.search(r"a[-\s]?haus", kommentar, re.IGNORECASE):
                             earnings += 20
                     except:
                         pass
@@ -138,12 +110,12 @@ def main():
                                     ])
 
                                     kommentar = str(row.get("Kommentar", "") or "")
-                                    if re.search(r"f[\üu]ngers?", kommentar, re.IGNORECASE) or re.search(r"a[-\\s]?haus", kommentar, re.IGNORECASE):
+                                    if re.search(r"f[üu]ngers?", kommentar, re.IGNORECASE) or re.search(r"a[-\s]?haus", kommentar, re.IGNORECASE):
                                         sheet_data.append([
                                             "",
                                             kommentar.strip(),
                                             "",
-                                            "Zusatz (Füingers/Ahaus)",
+                                            "Zusatz (Füngers/Ahaus)",
                                             20
                                         ])
 
