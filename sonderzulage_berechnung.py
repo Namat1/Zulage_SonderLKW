@@ -347,10 +347,8 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                # Excel-Datei einlesen
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
 
-                # Daten filtern (nur Zeilen mit "AZ" in Spalte 14)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
@@ -365,13 +363,13 @@ def main():
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
 
-                # Spalte 15 (Index 14) zusätzlich übernehmen
-                extracted_data["Kommentar"] = filtered_df.iloc[:, 14]
+                # Spalte P (Index 15) hinzufügen für Füngers/Ahaus
+                extracted_data["Kommentar"] = filtered_df.iloc[:, 15]
 
-                # "E-" Präfix in LKW-Spalte
+                # LKW-Nummer mit "E-" ergänzen
                 extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
 
-                # Art anhand LKW definieren
+                # Fahrzeugtyp bestimmen
                 extracted_data["Art"] = extracted_data["LKW"].apply(
                     lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
                 )
@@ -379,10 +377,10 @@ def main():
                 # Datum umwandeln
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
-                # Tour-Fallback: falls leer, Spalte Q verwenden (Index 16)
+                # Tour aus Spalte Q verwenden, wenn leer
                 extracted_data["Tour"] = extracted_data["Tour"].fillna(filtered_df.iloc[:, 16])
 
-                # Verdienstberechnung inkl. Zusatz für Füngers/Ahaus
+                # Verdienstberechnung mit Füngers/Ahaus-Logik
                 def calculate_earnings(row):
                     earnings = 0
                     lkw_values = [
@@ -400,9 +398,9 @@ def main():
                         except (ValueError, TypeError):
                             continue
 
-                    # Zusatz: Füngers / Ahaus prüfen mit Regex
+                    # Zusatz für Füngers / Ahaus (Regex aus Kommentar-Spalte)
                     try:
-                        col15_value = str(row["Kommentar"])
+                        col15_value = str(row.get("Kommentar", "") or "")
                         if (
                             re.search(r"f[üu]ngers?", col15_value, re.IGNORECASE) or
                             re.search(r"a[-\s]?haus", col15_value, re.IGNORECASE)
