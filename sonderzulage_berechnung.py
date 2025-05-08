@@ -350,7 +350,7 @@ def main():
                 # Excel-Datei einlesen
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
 
-                # Daten filtern (nur Zeilen mit "AZ" in einer bestimmten Spalte)
+                # Daten filtern (nur Zeilen mit "AZ" in Spalte 14)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
@@ -365,21 +365,24 @@ def main():
                 extracted_data = filtered_df.iloc[:, columns_to_extract]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
 
-                # Präfix "E-" vor jede Nummer in der Spalte "LKW" setzen
+                # Spalte 15 (Index 14) zusätzlich übernehmen
+                extracted_data["Kommentar"] = filtered_df.iloc[:, 14]
+
+                # "E-" Präfix in LKW-Spalte
                 extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
 
-                # Spalte "Art" basierend auf Fahrzeugnummern definieren
+                # Art anhand LKW definieren
                 extracted_data["Art"] = extracted_data["LKW"].apply(
                     lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
                 )
 
-                # Spalte "Datum" in datetime umwandeln
+                # Datum umwandeln
                 extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
 
-                # Falls "Tour" leer ist, nutze Spalte Q (Index 16 in Python)
-                extracted_data['Tour'] = extracted_data['Tour'].fillna(filtered_df.iloc[:, 16])
+                # Tour-Fallback: falls leer, Spalte Q verwenden (Index 16)
+                extracted_data["Tour"] = extracted_data["Tour"].fillna(filtered_df.iloc[:, 16])
 
-                # Verdienst berechnen
+                # Verdienstberechnung inkl. Zusatz für Füngers/Ahaus
                 def calculate_earnings(row):
                     earnings = 0
                     lkw_values = [
@@ -389,14 +392,25 @@ def main():
                     ]
                     for value in lkw_values:
                         try:
-                            # Konvertiere den Wert in eine Zahl (wenn möglich)
                             numeric_value = int(value) if isinstance(value, str) and value.isdigit() else value
                             if numeric_value in [602, 156]:
                                 earnings += 40
                             elif numeric_value in [620, 350, 520]:
                                 earnings += 20
                         except (ValueError, TypeError):
-                            continue  # Überspringe ungültige Werte
+                            continue
+
+                    # Zusatz: Füngers / Ahaus prüfen mit Regex
+                    try:
+                        col15_value = str(row["Kommentar"])
+                        if (
+                            re.search(r"f[üu]ngers?", col15_value, re.IGNORECASE) or
+                            re.search(r"a[-\s]?haus", col15_value, re.IGNORECASE)
+                        ):
+                            earnings += 20
+                    except:
+                        pass
+
                     return earnings
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
@@ -416,7 +430,7 @@ def main():
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
-                            sheet_name = f"{get_german_month_name(month)} {year}"  # Deutscher Monatsname
+                            sheet_name = f"{get_german_month_name(month)} {year}"
                             sheet_data = []
                             summary_data = []
 
@@ -425,7 +439,6 @@ def main():
                                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
                                 summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
 
-                                # Gruppendaten zusammenstellen
                                 sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
                                 sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
                                 for _, row in group.iterrows():
@@ -437,16 +450,13 @@ def main():
                                         row["Art"],
                                         row["Verdienst"]
                                     ])
-
                                 sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
                                 sheet_data.append([])
 
-                            # Daten in Excel-Tabellenblatt schreiben
                             sheet_df = pd.DataFrame(sheet_data)
-                            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])  # Tabellenblatt mit deutschem Namen
+                            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])
                             sheet = writer.sheets[sheet_name[:31]]
 
-                            # Zusammenfassung und Styling anwenden
                             add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
                             apply_styles(sheet)
 
@@ -459,6 +469,7 @@ def main():
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
+
 
 
 
