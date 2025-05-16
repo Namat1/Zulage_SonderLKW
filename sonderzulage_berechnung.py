@@ -52,21 +52,34 @@ def main():
                 st.error(f"Fehler beim Verarbeiten von {uploaded_file.name}: {e}")
 
         if not all_data.empty:
-            # Sortieren nach Nachname, Vorname und Datum
             all_data.sort_values(by=["Nachname", "Vorname", "Jahr", "Monat"], inplace=True)
-
             st.dataframe(all_data)
 
-            # Export vorbereiten
+            # 📦 Export vorbereiten
             output = BytesIO()
             with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                all_data.to_excel(writer, sheet_name="Zulagen", index=False)
+                # Blatt 1: Gesamtübersicht
+                all_data.to_excel(writer, sheet_name="Gesamtübersicht", index=False)
 
-            st.success("Daten erfolgreich verarbeitet.")
+                # 📆 Monatsweise Blätter mit Summen pro Fahrer
+                grouped = all_data.groupby(["Jahr", "Monat"])
+
+                for (jahr, monat), group in grouped:
+                    sheet_name = f"{jahr}_{str(monat).zfill(2)}"
+
+                    # Summen pro Fahrer
+                    summary = group.groupby(["Nachname", "Vorname"])["Verdienst"].sum().reset_index()
+                    summary = summary.rename(columns={"Verdienst": "Monatssumme (€)"})
+
+                    # Schreibe ins Monatsblatt
+                    summary.to_excel(writer, sheet_name=sheet_name, index=False)
+
+            st.success("Excel mit Monatsblättern erfolgreich erstellt.")
+
             st.download_button(
-                label="📥 Excel-Datei herunterladen",
+                label="📥 Excel-Datei mit Monatsauswertung herunterladen",
                 data=output.getvalue(),
-                file_name="Zulagen_nach_Fahrer_Monat.xlsx",
+                file_name="Zulagen_Monatsauswertung.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
