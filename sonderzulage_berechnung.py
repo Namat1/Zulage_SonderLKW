@@ -244,32 +244,44 @@ def main():
         for uploaded_file in uploaded_files:
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
 
-                if not filtered_df.empty:
-                    filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
-                    filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+                # Spaltennamen ersetzen durch Positionen
+                df.columns = [f"Spalte_{i}" for i in range(len(df.columns))]
+
+                # Filter auf Zeilen mit "AZ" in Spalte_13
+                filtered_df = df[df["Spalte_13"].astype(str).str.upper().str.contains("AZ", na=False)]
+
                 if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
+                    st.warning(f"Keine AZ-Zeilen in Datei {uploaded_file.name}")
                     continue
 
-                cols = [0, 3, 4, 10, 11, 12, 14]
-                extracted_data = filtered_df.iloc[:, cols]
-                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-                extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
+                # Relevante Daten extrahieren (nach deiner Struktur)
+                extracted_data = pd.DataFrame()
+                extracted_data["Nachname"] = filtered_df["Spalte_3"]
+                extracted_data["Vorname"] = filtered_df["Spalte_5"]
+                extracted_data["LKW"] = filtered_df["Spalte_11"]
+                extracted_data["Datum"] = pd.to_datetime(filtered_df["Spalte_14"], errors="coerce")
+                extracted_data["Tour"] = filtered_df["Spalte_17"] if "Spalte_17" in filtered_df.columns else ""
+
+                # LKW-Format anpassen
+                extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{int(x)}" if pd.notnull(x) else x)
+
+                # Art bestimmen
                 extracted_data["Art"] = extracted_data["LKW"].apply(
                     lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
                 )
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], errors="coerce")
-                extracted_data["Tour"] = extracted_data["Tour"].fillna(filtered_df.iloc[:, 16])
 
+                # Verdienst berechnen
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
+
+                # Jahr/Monat ergänzen
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
                 extracted_data["Jahr"] = extracted_data["Datum"].dt.year
+
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
 
             except Exception as e:
-                st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
+                st.error(f"Fehler beim Einlesen von {uploaded_file.name}: {e}")
 
         if not all_data.empty:
             output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
@@ -314,6 +326,7 @@ def main():
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren: {e}")
+
 
 if __name__ == "__main__":
     main()
