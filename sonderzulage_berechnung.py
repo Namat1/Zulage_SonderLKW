@@ -266,46 +266,50 @@ def main():
 
         if not all_data.empty:
             output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
-            try:
-                fallback = True
-                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
-                    for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                        if not month_data.empty:
-                            fallback = False
-                            sheet_name = f"{get_german_month_name(month)} {year}"
-                            sheet_data = []
-                            summary_data = []
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                total_earnings = group["Verdienst"].sum()
-                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    sheet_data.append([
-                                        format_date_with_german_weekday(row["Datum"]),
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
-                                    ])
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
+try:
+    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+        fallback = True
+        if not all_data.empty:
+            sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
+            for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
+                month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
+                if not month_data.empty:
+                    fallback = False
+                    sheet_name = f"{get_german_month_name(month)} {year}"
+                    sheet_data = []
+                    summary_data = []
 
-                            pd.DataFrame(sheet_data).to_excel(writer, index=False, sheet_name=sheet_name[:31])
-                            sheet = writer.sheets[sheet_name[:31]]
-                            add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
-                            apply_styles(sheet)
+                    for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
+                        total_earnings = group["Verdienst"].sum()
+                        personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                        summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
+                        sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
+                        sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
+                        for _, row in group.iterrows():
+                            sheet_data.append([
+                                format_date_with_german_weekday(row["Datum"]),
+                                row["Tour"],
+                                row["LKW"],
+                                row["Art"],
+                                row["Verdienst"]
+                            ])
+                        sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                        sheet_data.append([])
 
-                    if fallback:
-                        pd.DataFrame([["Keine gültigen AZ-Zeilen vorhanden."]]).to_excel(writer, sheet_name="Hinweis", index=False)
+                    pd.DataFrame(sheet_data).to_excel(writer, index=False, sheet_name=sheet_name[:31])
+                    sheet = writer.sheets[sheet_name[:31]]
+                    add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
+                    apply_styles(sheet)
 
-                with open(output_file, "rb") as file:
-                    st.download_button("Download Auswertung", file.read(), file_name=output_file, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-            except Exception as e:
-                st.error(f"Fehler beim Exportieren: {e}")
+        if fallback:
+            pd.DataFrame([["Keine gültigen AZ-Zeilen vorhanden."]]).to_excel(writer, sheet_name="Hinweis", index=False)
 
-if __name__ == "__main__":
-    main()
+    with open(output_file, "rb") as file:
+        st.download_button(
+            label="Download Auswertung",
+            data=file.read(),
+            file_name=output_file,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+except Exception as e:
+    st.error(f"Fehler beim Exportieren: {e}")
