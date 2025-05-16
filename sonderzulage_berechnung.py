@@ -20,9 +20,21 @@ def define_art(value):
         return "Gliederzug"
     return "Unbekannt"
 
-# Kürzung: Dictionary hier einfügen
+def calculate_earnings(row):
+    try:
+        if pd.notnull(row["LKW"]) and "-" in row["LKW"]:
+            nummer = int(row["LKW"].split("-")[1])
+            if nummer in [602, 156]:
+                return 40
+            elif nummer in [620, 350, 520, 266]:
+                return 20
+    except:
+        pass
+    return 0
+
+# Personalnummer-Zuordnung (gekürzt)
 name_to_personalnummer = {
-   "Adler": {"Philipp": "00041450"},
+    "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
     "Batkowski": {"Tilo": "00046601"},
     "Benabbes": {"Badr": "00048980"},
@@ -104,18 +116,6 @@ name_to_personalnummer = {
     "Zosel": {"Ingo": "00026303"},
 }
 
-def calculate_earnings(row):
-    try:
-        if pd.notnull(row["LKW"]) and "-" in row["LKW"]:
-            nummer = int(row["LKW"].split("-")[1])
-            if nummer in [602, 156]:
-                return 40
-            elif nummer in [620, 350, 520, 266]:
-                return 20
-    except:
-        pass
-    return 0
-
 def apply_styles(sheet):
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -166,7 +166,7 @@ def apply_styles(sheet):
                     try:
                         cell.value = float(cell.value)
                         cell.number_format = '#,##0.00 €'
-                    except (ValueError, TypeError):
+                    except:
                         pass
             if not first_cell_value:
                 is_first_in_block = True
@@ -244,18 +244,13 @@ def main():
         for uploaded_file in uploaded_files:
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-
-                # Spaltennamen ersetzen durch Positionen
                 df.columns = [f"Spalte_{i}" for i in range(len(df.columns))]
-
-                # Filter auf Zeilen mit "AZ" in Spalte_13
                 filtered_df = df[df["Spalte_13"].astype(str).str.upper().str.contains("AZ", na=False)]
 
                 if filtered_df.empty:
                     st.warning(f"Keine AZ-Zeilen in Datei {uploaded_file.name}")
                     continue
 
-                # Relevante Daten extrahieren (nach deiner Struktur)
                 extracted_data = pd.DataFrame()
                 extracted_data["Nachname"] = filtered_df["Spalte_3"]
                 extracted_data["Vorname"] = filtered_df["Spalte_5"]
@@ -263,18 +258,11 @@ def main():
                 extracted_data["Datum"] = pd.to_datetime(filtered_df["Spalte_14"], errors="coerce")
                 extracted_data["Tour"] = filtered_df["Spalte_17"] if "Spalte_17" in filtered_df.columns else ""
 
-                # LKW-Format anpassen
                 extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{int(x)}" if pd.notnull(x) else x)
-
-                # Art bestimmen
                 extracted_data["Art"] = extracted_data["LKW"].apply(
                     lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
                 )
-
-                # Verdienst berechnen
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-
-                # Jahr/Monat ergänzen
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
                 extracted_data["Jahr"] = extracted_data["Datum"].dt.year
 
@@ -287,10 +275,12 @@ def main():
             output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+                    fallback = True
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
                         if not month_data.empty:
+                            fallback = False
                             sheet_name = f"{get_german_month_name(month)} {year}"
                             sheet_data = []
                             summary_data = []
@@ -317,6 +307,9 @@ def main():
                             add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
                             apply_styles(sheet)
 
+                    if fallback:
+                        pd.DataFrame([["Keine gültigen AZ-Zeilen vorhanden."]]).to_excel(writer, sheet_name="Hinweis", index=False)
+
                 with open(output_file, "rb") as file:
                     st.download_button(
                         label="Download Auswertung",
@@ -326,7 +319,6 @@ def main():
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren: {e}")
-
 
 if __name__ == "__main__":
     main()
