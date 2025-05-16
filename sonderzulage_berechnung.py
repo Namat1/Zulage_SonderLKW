@@ -5,7 +5,7 @@ import io
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-st.title("Füngers-Zulagen Auswertung – Monatsweise, final formatiert")
+st.title("Füngers-Zulagen Auswertung – Einheitliche Darstellung")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
@@ -62,8 +62,8 @@ if uploaded_files:
                 df_monat = df_gesamt[df_gesamt["Monat"] == monat_key]
                 zeilen = []
                 for (nach, vor), gruppe in df_monat.groupby(["Nachname", "Vorname"]):
-                    zeilen.append([f"{vor} {nach}"])  # Namenszeile
-                    zeilen.append(["Datum", "Kommentar", "Verdienst"])  # Überschriften
+                    zeilen.append([f"{vor} {nach}"])
+                    zeilen.append(["Datum", "Kommentar", "Verdienst"])
                     for _, r in gruppe.iterrows():
                         zeilen.append([r["Datum"], r["Kommentar"], r["Verdienst"]])
                     zeilen.append(["Gesamt", "", gruppe["Verdienst"].sum()])
@@ -105,7 +105,7 @@ if uploaded_files:
                     adjusted_width = int(max_len * 1.2) + 2
                     sheet.column_dimensions[col_letter].width = adjusted_width
 
-        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final_v3.xlsx")
+        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final_v4.xlsx")
 
     else:
         st.warning("Keine gültigen Füngers-Zulagen gefunden.")
