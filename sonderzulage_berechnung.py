@@ -1,15 +1,14 @@
+
 import pandas as pd
 import streamlit as st
-from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl import Workbook
 import calendar
 
 # Deutsche Monatsnamen
-german_months = [
-    "Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
-    "Juli", "August", "September", "Oktober", "November", "Dezember"
-]
+german_months = ["Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
+                 "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
 def get_german_month_name(month_number):
     return german_months[month_number]
@@ -150,9 +149,9 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         cell.font = Font(bold=True)
         cell.border = border
 
-# Beispielhafte Personalnummern-Zuordnung (gekürzt für Lesbarkeit)
+# Personalnummern-Zuordnung (gekürzt für Beispiel)
 name_to_personalnummer = {
-  "Adler": {"Philipp": "00041450"},
+    "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
     "Batkowski": {"Tilo": "00046601"},
     "Benabbes": {"Badr": "00048980"},
@@ -245,12 +244,12 @@ def main():
         for uploaded_file in uploaded_files:
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].str.contains(r"\\bAZ\\b", case=False, na=False)]
+                filtered_df = df[df.iloc[:, 13].astype(str).str.contains("AZ", case=False, na=False)]
                 filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
                 filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
 
                 if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten in {uploaded_file.name}")
+                    st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
                 cols = [0, 3, 4, 10, 11, 12, 14]
@@ -262,6 +261,7 @@ def main():
                 data["Monat"] = data["Datum"].dt.month
                 data["Jahr"] = data["Datum"].dt.year
                 all_data = pd.concat([all_data, data], ignore_index=True)
+
             except Exception as e:
                 st.error(f"Fehler beim Verarbeiten von {uploaded_file.name}: {e}")
 
