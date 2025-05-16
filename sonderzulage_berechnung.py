@@ -23,7 +23,7 @@ def define_art(value):
         return "Gigaliner"
     elif value in [350, 620]:
         return "Tandem"
-    elif value == [520, 266]:
+    elif value in [520, 266]:
         return "Gliederzug"
     return "Unbekannt"
 
