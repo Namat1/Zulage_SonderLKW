@@ -6,22 +6,6 @@ from openpyxl.utils import get_column_letter
 from openpyxl import Workbook
 import calendar
 
-# Deutsche Monatsnamen
-german_months = ["Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
-                 "Juli", "August", "September", "Oktober", "November", "Dezember"]
-
-def get_german_month_name(month_number):
-    return german_months[month_number]
-
-def define_art(value):
-    if value in [602, 156]:
-        return "Gigaliner"
-    elif value in [350, 620]:
-        return "Tandem"
-    elif value in [520, 266]:
-        return "Gliederzug"
-    return "Unbekannt"
-
 def calculate_earnings(row):
     try:
         if pd.notnull(row["LKW"]) and "-" in row["LKW"]:
@@ -34,6 +18,20 @@ def calculate_earnings(row):
         pass
     return 0
 
+def define_art(value):
+    if value in [602, 156]:
+        return "Gigaliner"
+    elif value in [350, 620]:
+        return "Tandem"
+    elif value in [520, 266]:
+        return "Gliederzug"
+    return "Unbekannt"
+
+def get_german_month_name(month_number):
+    german_months = ["Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
+                     "Juli", "August", "September", "Oktober", "November", "Dezember"]
+    return german_months[month_number]
+
 def format_date_with_german_weekday(date):
     mapping = {
         "Monday": "Montag", "Tuesday": "Dienstag", "Wednesday": "Mittwoch",
@@ -45,10 +43,8 @@ def format_date_with_german_weekday(date):
     return date.strftime(f"%d.%m.%Y ({german_day}, KW{kw})")
 
 def apply_styles(sheet):
-    thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
     total_fill = PatternFill("solid", fgColor="C7B7B3")
     data_fill = PatternFill("solid", fgColor="FFFFFF")
     name_fill = PatternFill("solid", fgColor="F2ECE8")
@@ -101,7 +97,6 @@ def apply_styles(sheet):
     for col in sheet.columns:
         max_len = max(len(str(cell.value) or "") for cell in col)
         sheet.column_dimensions[get_column_letter(col[0].column)].width = max_len + 3
-
     sheet.row_dimensions[1].hidden = True
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
@@ -149,90 +144,6 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         cell.font = Font(bold=True)
         cell.border = border
 
-# Personalnummern-Zuordnung (gekürzt für Beispiel)
-name_to_personalnummer = {
-    "Adler": {"Philipp": "00041450"},
-    "Auer": {"Frank": "00020795"},
-    "Batkowski": {"Tilo": "00046601"},
-    "Benabbes": {"Badr": "00048980"},
-    "Biebow": {"Thomas": "00042004"},
-    "Bläsing": {"Elmar": "00049093"},
-    "Bursian": {"Ronny": "00025714"},
-    "Buth": {"Sven": "00046673"},
-    "Böhnke": {"Marcel": "00020833"},
-    "Carstensen": {"Martin": "00042412"},
-    "Chege": {"Moses Gichuru": "00046106"},
-    "Dammasch": {"Bernd": "00019297"},
-    "Demuth": {"Harry": "00020796"},
-    "Doroszkiewicz": {"Bogumil": "00049132"},
-    "Dürr": {"Holger": "00039164"},
-    "Effenberger": {"Sven": "00030807"},
-    "Engel": {"Raymond": "00033429"},
-    "Fechner": {"Danny": "00043696", "Klaus": "00038278"},
-    "Findeklee": {"Bernd": "00020804"},
-    "Flint": {"Henryk": "00042414"},
-    "Fuhlbrügge": {"Justin": "00046289"},
-    "Gehrmann": {"Rayk": "00046702"},
-    "Gheonea": {"Costel-Daniel": "00050877"},
-    "Glanz": {"Björn": "00041914"},
-    "Gnech": {"Torsten": "00018613"},
-    "Greve": {"Nicole": "00040760"},
-    "Guthmann": {"Fred": "00018328"},
-    "Hagen": {"Andy": "00020271"},
-    "Hartig": {"Sebastian": "00044120"},
-    "Haus": {"David": "00046101"},
-    "Heeser": {"Bernd": "00041916"},
-    "Helm": {"Philipp": "00046685"},
-    "Henkel": {"Bastian": "00048187"},
-    "Holtz": {"Torsten": "00021159"},
-    "Janikiewicz": {"Radoslaw": "00042159"},
-    "Kelling": {"Jonas Ole": "00044140"},
-    "Kleiber": {"Lutz": "00026255"},
-    "Klemkow": {"Ralf": "00040634"},
-    "Kollmann": {"Steffen": "00040988"},
-    "König": {"Heiko": "00036341"},
-    "Krazewski": {"Cezary": "00039463"},
-    "Krieger": {"Christian": "00049092"},
-    "Krull": {"Benjamin": "00044192"},
-    "Lange": {"Michael": "00035407"},
-    "Lewandowski": {"Kamil": "00041044"},
-    "Likoonski": {"Vladimir": "00044766"},
-    "Linke": {"Erich": "00048377"},
-    "Lefkih": {"Houssni": "00052293"},
-    "Ludolf": {"Michel": "00048814"},
-    "Marouni": {"Ayyoub": "00048986"},
-    "Mintel": {"Mario": "00046686"},
-    "Ohlenroth": {"Nadja": "00042114"},
-    "Ohms": {"Torsten": "00019300"},
-    "Okoth": {"Tedy Omondi": "00046107"},
-    "Oszmian": {"Jacub": "00039464"},
-    "Paul": {"Toralf": "00010490"},
-    "Pabst": {"Torsten": "00021976"},
-    "Pawlak": {"Bartosz": "00036381"},
-    "Piepke": {"Torsten": "00021390"},
-    "Plinke": {"Killian": "00044137"},
-    "Pogodski": {"Enrico": "00046668"},
-    "Quint": {"Stefan": "00035718"},
-    "Rimba": {"Rimba Gona": "00046108"},
-    "Sarwatka": {"Heiko": "00028747"},
-    "Scheil": {"Eric-Rene": "00038579", "Rene": "00020851"},
-    "Schlichting": {"Michael": "00021452"},
-    "Schlutt": {"Hubert": "00020880", "Rene": "00042932"},
-    "Schmieder": {"Steffen": "00046286"},
-    "Schneider": {"Matthias": "00045495"},
-    "Schulz": {"Julian": "00049130", "Stephan": "00041558"},
-    "Singh": {"Jagtar": "00040902"},
-    "Stoltz": {"Thorben": "00040991"},
-    "Thal": {"Jannic": "00046006"},
-    "Tumanow": {"Vasilli": "00045019"},
-    "Wachnowski": {"Klaus": "00026019"},
-    "Wendel": {"Danilo": "00048994"},
-    "Wille": {"Rene": "00021393"},
-    "Wisniewski": {"Krzysztof": "00046550"},
-    "Zander": {"Jan": "00042454"},
-    "Zosel": {"Ingo": "00026303"},
-}
-
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
@@ -243,18 +154,20 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
-                filtered_df = df[df.iloc[:, 13].astype(str).str.contains("AZ", case=False, na=False)]
-                filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
+                df = pd.read_excel(uploaded_file, sheet_name="Touren", header=1)
+
+                filtered_df = df[df["Bemerkungen"].astype(str).str.contains("AZ", case=False, na=False)]
+                filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], format="%d.%m.%Y", errors="coerce")
                 filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
 
                 if filtered_df.empty:
                     st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
-                cols = [0, 3, 4, 10, 11, 12, 14]
-                data = filtered_df.iloc[:, cols]
+                cols = ["Tour", "Name", "V-Name", "LKW1", "LKW", "Frz. Gr.", "Datum"]
+                data = filtered_df[cols].copy()
                 data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
+
                 data["LKW"] = data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
                 data["Art"] = data["LKW"].apply(lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt")
                 data["Verdienst"] = data.apply(calculate_earnings, axis=1)
@@ -276,7 +189,7 @@ def main():
                     for (nachname, vorname), gruppe in df_month.groupby(["Nachname", "Vorname"]):
                         name = f"{vorname} {nachname}"
                         summe = gruppe["Verdienst"].sum()
-                        pnr = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
+                        pnr = "Unbekannt"
                         summary.append([name, pnr, summe])
                         sheet_data.append([name, "", "", "", ""])
                         sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
