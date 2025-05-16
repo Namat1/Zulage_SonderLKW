@@ -1,18 +1,19 @@
 
 import pandas as pd
 import streamlit as st
+import re
 from datetime import datetime
 
+def extract_lkw_nummer(lkw_text):
+    match = re.search(r"E-(\d+)", str(lkw_text))
+    return int(match.group(1)) if match else None
+
 def calculate_earnings(row):
-    try:
-        if pd.notnull(row["LKW"]) and "-" in str(row["LKW"]):
-            nummer = int(str(row["LKW"]).split("-")[1])
-            if nummer in [266, 520, 620, 350]:
-                return 20
-            elif nummer in [602, 156]:
-                return 40
-    except:
-        pass
+    nummer = extract_lkw_nummer(row["LKW"])
+    if nummer in [266, 520, 620, 350]:
+        return 20
+    elif nummer in [602, 156]:
+        return 40
     return 0
 
 def main():
@@ -25,10 +26,8 @@ def main():
 
         for uploaded_file in uploaded_files:
             try:
-                # ab Zeile 5 einlesen (index 4), keine Header-Zeile nutzen
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=None, skiprows=4)
 
-                # Spalten zuweisen
                 df = df.rename(columns={
                     3: "Nachname",
                     4: "Vorname",
@@ -39,13 +38,11 @@ def main():
 
                 df = df[["Nachname", "Vorname", "LKW", "AZ-Kennung", "Datum"]]
 
-                # Filter auf AZ
                 filtered_df = df[df["AZ-Kennung"].astype(str).str.contains("AZ", case=False, na=False)]
                 filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
                 filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
 
-                # LKW-Format und Verdienst
-                filtered_df["LKW"] = filtered_df["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
+                filtered_df["LKW"] = filtered_df["LKW"].apply(lambda x: f"E-{int(float(str(x).replace('E-', '')))}" if pd.notnull(x) else x)
                 filtered_df["Verdienst"] = filtered_df.apply(calculate_earnings, axis=1)
 
                 all_data = pd.concat([all_data, filtered_df], ignore_index=True)
