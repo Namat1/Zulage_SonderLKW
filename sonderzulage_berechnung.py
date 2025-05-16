@@ -5,7 +5,7 @@ import io
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-st.title("Füngers-Zulagen Auswertung – Monatsweise, formatiert")
+st.title("Füngers-Zulagen Auswertung – Monatsweise, final formatiert")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
@@ -62,44 +62,50 @@ if uploaded_files:
                 df_monat = df_gesamt[df_gesamt["Monat"] == monat_key]
                 zeilen = []
                 for (nach, vor), gruppe in df_monat.groupby(["Nachname", "Vorname"]):
-                    zeilen.append([f"{vor} {nach}"])
-                    zeilen.append(["Datum", "Kommentar", "Verdienst"])
+                    zeilen.append([f"{vor} {nach}"])  # Namenszeile
+                    zeilen.append(["Datum", "Kommentar", "Verdienst"])  # Überschriften
                     for _, r in gruppe.iterrows():
                         zeilen.append([r["Datum"], r["Kommentar"], r["Verdienst"]])
                     zeilen.append(["Gesamt", "", gruppe["Verdienst"].sum()])
 
-                df_sheet = pd.DataFrame(zeilen)
+                df_sheet = pd.DataFrame(zeilen, columns=["Spalte A", "Spalte B", "Spalte C"])
                 sheet_name = monat_key.split("_")[1][:31]
                 df_sheet.to_excel(writer, index=False, sheet_name=sheet_name)
 
-                # Formatieren
+                # Formatierung
                 sheet = writer.sheets[sheet_name]
                 thin = Border(left=Side(style='thin'), right=Side(style='thin'),
                               top=Side(style='thin'), bottom=Side(style='thin'))
 
+                hellblau = PatternFill("solid", fgColor="ddebf7")
+                header_fill = PatternFill("solid", fgColor="95b3d7")
+                total_fill = PatternFill("solid", fgColor="c7b7b3")
+
                 for row in sheet.iter_rows():
+                    first_cell = str(row[0].value or "")
                     for cell in row:
                         cell.font = Font(name="Calibri", size=11)
                         cell.alignment = Alignment(horizontal="left", vertical="center")
                         cell.border = thin
 
-                        val = str(cell.value)
-                        if val.startswith("Gesamt"):
+                        if cell.row == 2:
                             cell.font = Font(bold=True)
-                            cell.fill = PatternFill("solid", fgColor="c7b7b3")
-                        elif cell.row == 2:
+                            cell.fill = header_fill
+                        elif "Gesamt" in first_cell:
                             cell.font = Font(bold=True)
-                            cell.fill = PatternFill("solid", fgColor="95b3d7")
-                        elif cell.row == 1:
+                            cell.fill = total_fill
+                        elif cell.row > 1 and row[1].value is None and row[2].value is None:
                             cell.font = Font(bold=True, size=12)
+                            cell.fill = hellblau
 
-                # Automatische Spaltenbreite
+                # Spaltenbreite auf 120 % des Inhalts
                 for col_cells in sheet.columns:
                     max_len = max((len(str(cell.value)) if cell.value is not None else 0) for cell in col_cells)
                     col_letter = get_column_letter(col_cells[0].column)
-                    sheet.column_dimensions[col_letter].width = max_len + 2
+                    adjusted_width = int(max_len * 1.2) + 2
+                    sheet.column_dimensions[col_letter].width = adjusted_width
 
-        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_clean.xlsx")
+        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final_v3.xlsx")
 
     else:
         st.warning("Keine gültigen Füngers-Zulagen gefunden.")
