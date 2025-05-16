@@ -1,10 +1,10 @@
+
 import pandas as pd
 import streamlit as st
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl import Workbook
 
-# Deutsche Monatsnamen
 german_months = ["Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
                  "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
@@ -32,9 +32,8 @@ def calculate_earnings(row):
         pass
     return 0
 
-# Personalnummer-Zuordnung (gekürzt)
 name_to_personalnummer = {
-    "Adler": {"Philipp": "00041450"},
+   "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
     "Batkowski": {"Tilo": "00046601"},
     "Benabbes": {"Badr": "00048980"},
@@ -117,10 +116,8 @@ name_to_personalnummer = {
 }
 
 def apply_styles(sheet):
-    thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
     total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
@@ -129,7 +126,6 @@ def apply_styles(sheet):
 
     for row in sheet.iter_rows(min_col=1, max_col=5, values_only=False):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
-
         if "Gesamtverdienst" in first_cell_value:
             for cell in row:
                 cell.fill = total_fill
@@ -235,12 +231,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
-
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
 
     if uploaded_files:
         all_data = pd.DataFrame()
-
         for uploaded_file in uploaded_files:
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
@@ -267,15 +261,14 @@ def main():
                 extracted_data["Jahr"] = extracted_data["Datum"].dt.year
 
                 all_data = pd.concat([all_data, extracted_data], ignore_index=True)
-
             except Exception as e:
                 st.error(f"Fehler beim Einlesen von {uploaded_file.name}: {e}")
 
         if not all_data.empty:
             output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
             try:
+                fallback = True
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    fallback = True
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
@@ -284,7 +277,6 @@ def main():
                             sheet_name = f"{get_german_month_name(month)} {year}"
                             sheet_data = []
                             summary_data = []
-
                             for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
                                 total_earnings = group["Verdienst"].sum()
                                 personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
@@ -311,12 +303,7 @@ def main():
                         pd.DataFrame([["Keine gültigen AZ-Zeilen vorhanden."]]).to_excel(writer, sheet_name="Hinweis", index=False)
 
                 with open(output_file, "rb") as file:
-                    st.download_button(
-                        label="Download Auswertung",
-                        data=file,
-                        file_name=output_file,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+                    st.download_button("Download Auswertung", file.read(), file_name=output_file, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except Exception as e:
                 st.error(f"Fehler beim Exportieren: {e}")
 
