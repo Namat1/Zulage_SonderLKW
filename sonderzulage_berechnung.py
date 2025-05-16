@@ -1,9 +1,7 @@
-
 import pandas as pd
 import streamlit as st
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-from openpyxl import Workbook
 
 # Deutsche Monatsnamen
 german_months = ["Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -33,88 +31,14 @@ def calculate_earnings(row):
         pass
     return 0
 
-name_to_personalnummer = {
-    "Adler": {"Philipp": "00041450"},
-    "Auer": {"Frank": "00020795"},
-    "Batkowski": {"Tilo": "00046601"},
-    "Benabbes": {"Badr": "00048980"},
-    "Biebow": {"Thomas": "00042004"},
-    "Bläsing": {"Elmar": "00049093"},
-    "Bursian": {"Ronny": "00025714"},
-    "Buth": {"Sven": "00046673"},
-    "Böhnke": {"Marcel": "00020833"},
-    "Carstensen": {"Martin": "00042412"},
-    "Chege": {"Moses Gichuru": "00046106"},
-    "Dammasch": {"Bernd": "00019297"},
-    "Demuth": {"Harry": "00020796"},
-    "Doroszkiewicz": {"Bogumil": "00049132"},
-    "Dürr": {"Holger": "00039164"},
-    "Effenberger": {"Sven": "00030807"},
-    "Engel": {"Raymond": "00033429"},
-    "Fechner": {"Danny": "00043696", "Klaus": "00038278"},
-    "Findeklee": {"Bernd": "00020804"},
-    "Flint": {"Henryk": "00042414"},
-    "Fuhlbrügge": {"Justin": "00046289"},
-    "Gehrmann": {"Rayk": "00046702"},
-    "Gheonea": {"Costel-Daniel": "00050877"},
-    "Glanz": {"Björn": "00041914"},
-    "Gnech": {"Torsten": "00018613"},
-    "Greve": {"Nicole": "00040760"},
-    "Guthmann": {"Fred": "00018328"},
-    "Hagen": {"Andy": "00020271"},
-    "Hartig": {"Sebastian": "00044120"},
-    "Haus": {"David": "00046101"},
-    "Heeser": {"Bernd": "00041916"},
-    "Helm": {"Philipp": "00046685"},
-    "Henkel": {"Bastian": "00048187"},
-    "Holtz": {"Torsten": "00021159"},
-    "Janikiewicz": {"Radoslaw": "00042159"},
-    "Kelling": {"Jonas Ole": "00044140"},
-    "Kleiber": {"Lutz": "00026255"},
-    "Klemkow": {"Ralf": "00040634"},
-    "Kollmann": {"Steffen": "00040988"},
-    "König": {"Heiko": "00036341"},
-    "Krazewski": {"Cezary": "00039463"},
-    "Krieger": {"Christian": "00049092"},
-    "Krull": {"Benjamin": "00044192"},
-    "Lange": {"Michael": "00035407"},
-    "Lewandowski": {"Kamil": "00041044"},
-    "Likoonski": {"Vladimir": "00044766"},
-    "Linke": {"Erich": "00048377"},
-    "Lefkih": {"Houssni": "00052293"},
-    "Ludolf": {"Michel": "00048814"},
-    "Marouni": {"Ayyoub": "00048986"},
-    "Mintel": {"Mario": "00046686"},
-    "Ohlenroth": {"Nadja": "00042114"},
-    "Ohms": {"Torsten": "00019300"},
-    "Okoth": {"Tedy Omondi": "00046107"},
-    "Oszmian": {"Jacub": "00039464"},
-    "Paul": {"Toralf": "00010490"},
-    "Pabst": {"Torsten": "00021976"},
-    "Pawlak": {"Bartosz": "00036381"},
-    "Piepke": {"Torsten": "00021390"},
-    "Plinke": {"Killian": "00044137"},
-    "Pogodski": {"Enrico": "00046668"},
-    "Quint": {"Stefan": "00035718"},
-    "Rimba": {"Rimba Gona": "00046108"},
-    "Sarwatka": {"Heiko": "00028747"},
-    "Scheil": {"Eric-Rene": "00038579", "Rene": "00020851"},
-    "Schlichting": {"Michael": "00021452"},
-    "Schlutt": {"Hubert": "00020880", "Rene": "00042932"},
-    "Schmieder": {"Steffen": "00046286"},
-    "Schneider": {"Matthias": "00045495"},
-    "Schulz": {"Julian": "00049130", "Stephan": "00041558"},
-    "Singh": {"Jagtar": "00040902"},
-    "Stoltz": {"Thorben": "00040991"},
-    "Thal": {"Jannic": "00046006"},
-    "Tumanow": {"Vasilli": "00045019"},
-    "Wachnowski": {"Klaus": "00026019"},
-    "Wendel": {"Danilo": "00048994"},
-    "Wille": {"Rene": "00021393"},
-    "Wisniewski": {"Krzysztof": "00046550"},
-    "Zander": {"Jan": "00042454"},
-    "Zosel": {"Ingo": "00026303"},
-}
+def format_date_with_german_weekday(date):
+    wochentage_mapping = {
+        "Monday": "Montag", "Tuesday": "Dienstag", "Wednesday": "Mittwoch",
+        "Thursday": "Donnerstag", "Friday": "Freitag", "Saturday": "Samstag", "Sunday": "Sonntag"
+    }
+    german_weekday = wochentage_mapping.get(date.strftime("%A"), "")
+    kw = int(date.strftime("%W")) + 1
+    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{kw})")
 
 def apply_styles(sheet):
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
@@ -175,15 +99,6 @@ def apply_styles(sheet):
 
     sheet.row_dimensions[1].hidden = True
 
-def format_date_with_german_weekday(date):
-    wochentage_mapping = {
-        "Monday": "Montag", "Tuesday": "Dienstag", "Wednesday": "Mittwoch",
-        "Thursday": "Donnerstag", "Friday": "Freitag", "Saturday": "Samstag", "Sunday": "Sonntag"
-    }
-    german_weekday = wochentage_mapping.get(date.strftime("%A"), "")
-    kw = int(date.strftime("%W")) + 1
-    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{kw})")
-
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     header_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
     name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
@@ -230,6 +145,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         if cell.fill.fill_type is None:
             cell.fill = total_fill
 
+# Hauptfunktion
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
     uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
@@ -265,11 +181,11 @@ def main():
             except Exception as e:
                 st.error(f"Fehler beim Einlesen von {uploaded_file.name}: {e}")
 
-        output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
-        try:
-            with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                fallback = True
-                if not all_data.empty:
+        if not all_data.empty:
+            output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
+            try:
+                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+                    fallback = True
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
                         month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
@@ -301,18 +217,19 @@ def main():
                             add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
                             apply_styles(sheet)
 
-                if fallback:
-                    pd.DataFrame([["Keine gültigen AZ-Zeilen vorhanden."]]).to_excel(writer, sheet_name="Hinweis", index=False)
+                    if fallback:
+                        pd.DataFrame([["Keine gültigen AZ-Zeilen vorhanden."]]).to_excel(writer, sheet_name="Hinweis", index=False)
 
-            with open(output_file, "rb") as file:
-                st.download_button(
-                    label="Download Auswertung",
-                    data=file.read(),
-                    file_name=output_file,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-        except Exception as e:
-            st.error(f"Fehler beim Exportieren: {e}")
+                with open(output_file, "rb") as file:
+                    st.download_button(
+                        label="Download Auswertung",
+                        data=file.read(),
+                        file_name=output_file,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+            except Exception as e:
+                st.error(f"Fehler beim Exportieren: {e}")
 
 if __name__ == "__main__":
     main()
