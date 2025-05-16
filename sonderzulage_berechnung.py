@@ -37,35 +37,36 @@ def main():
                 })
 
                 df = df[["Nachname", "Vorname", "LKW", "AZ-Kennung", "Datum"]]
+                df = df[df["AZ-Kennung"].astype(str).str.contains("AZ", case=False, na=False)]
+                df["Datum"] = pd.to_datetime(df["Datum"], errors="coerce")
+                df = df[df["Datum"] >= pd.Timestamp("2025-01-01")]
 
-                filtered_df = df[df["AZ-Kennung"].astype(str).str.contains("AZ", case=False, na=False)]
-                filtered_df["Datum"] = pd.to_datetime(filtered_df["Datum"], errors="coerce")
-                filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
+                df["LKW"] = df["LKW"].apply(lambda x: f"E-{int(float(str(x).replace('E-', '')))}" if pd.notnull(x) else x)
+                df["Verdienst"] = df.apply(calculate_earnings, axis=1)
+                df["Monat"] = df["Datum"].dt.month
+                df["Jahr"] = df["Datum"].dt.year
 
-                filtered_df["LKW"] = filtered_df["LKW"].apply(lambda x: f"E-{int(float(str(x).replace('E-', '')))}" if pd.notnull(x) else x)
-                filtered_df["Verdienst"] = filtered_df.apply(calculate_earnings, axis=1)
-
-                all_data = pd.concat([all_data, filtered_df], ignore_index=True)
+                all_data = pd.concat([all_data, df], ignore_index=True)
 
             except Exception as e:
                 st.error(f"Fehler beim Verarbeiten von {uploaded_file.name}: {e}")
 
         if not all_data.empty:
+            # Sortieren nach Nachname, Vorname und Datum
+            all_data.sort_values(by=["Nachname", "Vorname", "Jahr", "Monat"], inplace=True)
+
             st.dataframe(all_data)
-            st.success("Daten erfolgreich verarbeitet.")
 
-            # Excel-Datei erzeugen
+            # Export vorbereiten
             output = BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                all_data.to_excel(writer, index=False, sheet_name="Zulagen")
-                writer.save()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                all_data.to_excel(writer, sheet_name="Zulagen", index=False)
 
-            output.seek(0)
-
+            st.success("Daten erfolgreich verarbeitet.")
             st.download_button(
-                label="📥 Excel-Datei mit Ergebnissen herunterladen",
-                data=output,
-                file_name="zulagen_auswertung.xlsx",
+                label="📥 Excel-Datei herunterladen",
+                data=output.getvalue(),
+                file_name="Zulagen_nach_Fahrer_Monat.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
