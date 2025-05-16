@@ -1,8 +1,8 @@
-
 import pandas as pd
 import streamlit as st
 import re
 from datetime import datetime
+from io import BytesIO
 
 def extract_lkw_nummer(lkw_text):
     match = re.search(r"E-(\d+)", str(lkw_text))
@@ -53,6 +53,21 @@ def main():
         if not all_data.empty:
             st.dataframe(all_data)
             st.success("Daten erfolgreich verarbeitet.")
+
+            # Excel-Datei erzeugen
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                all_data.to_excel(writer, index=False, sheet_name="Zulagen")
+                writer.save()
+
+            output.seek(0)
+
+            st.download_button(
+                label="📥 Excel-Datei mit Ergebnissen herunterladen",
+                data=output,
+                file_name="zulagen_auswertung.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
 if __name__ == "__main__":
     main()
