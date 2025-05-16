@@ -9,7 +9,7 @@ st.title("Füngers-Zulagen Auswertung – Monatsübersicht")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
-# Deutsche Monatsnamen
+# Deutsche Monatsnamen (mit Nummer für Sortierung)
 german_months = {
     1: "Januar", 2: "Februar", 3: "März", 4: "April",
     5: "Mai", 6: "Juni", 7: "Juli", 8: "August",
@@ -37,14 +37,16 @@ if uploaded_files:
                     and pd.notnull(vorname)
                     and pd.notnull(datum)
                 ):
-                    monat = german_months[datum.month] + f" {datum.year}"
+                    monat_index = datum.month
+                    jahr = datum.year
+                    monat_name = german_months[monat_index]
                     eintraege.append({
                         "Nachname": name,
                         "Vorname": vorname,
                         "Datum": datum.strftime("%d.%m.%Y"),
                         "Kommentar": kommentar,
                         "Verdienst": 20,
-                        "Monat": monat
+                        "Monat": f"{monat_index:02d}-{jahr}_{monat_name} {jahr}"
                     })
 
         except Exception as e:
@@ -57,21 +59,23 @@ if uploaded_files:
 
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            for monat, df_monat in df_gesamt.groupby("Monat"):
+            for monat_key in sorted(df_gesamt["Monat"].unique()):
+                df_monat = df_gesamt[df_gesamt["Monat"] == monat_key]
                 zeilen = []
                 for (nach, vor), gruppe in df_monat.groupby(["Nachname", "Vorname"]):
-                    zeilen.append([f"{vor} {nach}", "", "", "", ""])
-                    zeilen.append(["Datum", "Kommentar", "Verdienst", "", ""])
+                    zeilen.append([f"{vor} {nach}"])
+                    zeilen.append(["Datum", "Kommentar", "Verdienst"])
                     for _, r in gruppe.iterrows():
-                        zeilen.append([r["Datum"], r["Kommentar"], r["Verdienst"], "", ""])
-                    zeilen.append(["Gesamt", "", gruppe["Verdienst"].sum(), "", ""])
+                        zeilen.append([r["Datum"], r["Kommentar"], r["Verdienst"]])
+                    zeilen.append(["Gesamt", "", gruppe["Verdienst"].sum()])
                     zeilen.append([])
 
                 df_sheet = pd.DataFrame(zeilen)
-                df_sheet.to_excel(writer, index=False, sheet_name=monat[:31])
+                sheet_name = monat_key.split("_")[1][:31]
+                df_sheet.to_excel(writer, index=False, sheet_name=sheet_name)
 
-                # Formatierung
-                sheet = writer.sheets[monat[:31]]
+                # Formatieren
+                sheet = writer.sheets[sheet_name]
                 thin = Border(left=Side(style='thin'), right=Side(style='thin'),
                               top=Side(style='thin'), bottom=Side(style='thin'))
                 for row in sheet.iter_rows():
@@ -86,13 +90,13 @@ if uploaded_files:
                             cell.font = Font(bold=True)
                             cell.fill = PatternFill("solid", fgColor="c7b7b3")
 
-                # Spaltenbreiten anpassen
+                # Spaltenbreiten
                 for col in sheet.columns:
                     max_length = max(len(str(cell.value) or "") for cell in col)
                     col_letter = get_column_letter(col[0].column)
-                    sheet.column_dimensions[col_letter].width = max_length + 2
+                    sheet.column_dimensions[col_letter].width = max_length + 3
 
-        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_zulagen_monatsweise.xlsx")
+        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final.xlsx")
 
     else:
         st.warning("Keine gültigen Füngers-Zulagen gefunden.")
