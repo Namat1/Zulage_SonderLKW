@@ -16,6 +16,27 @@ def calculate_earnings(row):
         return 40
     return 0
 
+def format_sheet(writer, sheet_name, df):
+    workbook = writer.book
+    worksheet = writer.sheets[sheet_name]
+
+    header_format = workbook.add_format({
+        'bold': True,
+        'text_wrap': True,
+        'valign': 'center',
+        'fg_color': '#D9E1F2',
+        'border': 1
+    })
+
+    # Format Header
+    for col_num, value in enumerate(df.columns.values):
+        worksheet.write(0, col_num, value, header_format)
+
+    # Setze Spaltenbreite automatisch
+    for i, col in enumerate(df.columns):
+        max_length = max(df[col].astype(str).map(len).max(), len(str(col)))
+        worksheet.set_column(i, i, max_length + 2)
+
 def main():
     st.title("Zulage-Auswertung Sonderfahrzeuge")
 
@@ -58,26 +79,27 @@ def main():
             # 📦 Export vorbereiten
             output = BytesIO()
             with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                # Blatt 1: Gesamtübersicht
+                # Blatt 1: Gesamtübersicht (alle Daten)
                 all_data.to_excel(writer, sheet_name="Gesamtübersicht", index=False)
+                format_sheet(writer, "Gesamtübersicht", all_data)
 
-                # 📆 Monatsweise Blätter mit Summen pro Fahrer
+                # 📆 Monatsweise Blätter mit Gruppierung Fahrer + LKW
                 grouped = all_data.groupby(["Jahr", "Monat"])
 
                 for (jahr, monat), group in grouped:
                     sheet_name = f"{jahr}_{str(monat).zfill(2)}"
 
-                    # Summen pro Fahrer
-                    summary = group.groupby(["Nachname", "Vorname"])["Verdienst"].sum().reset_index()
+                    # Gruppieren: Fahrer + Fahrzeug
+                    summary = group.groupby(["Nachname", "Vorname", "LKW"])["Verdienst"].sum().reset_index()
                     summary = summary.rename(columns={"Verdienst": "Monatssumme (€)"})
 
-                    # Schreibe ins Monatsblatt
                     summary.to_excel(writer, sheet_name=sheet_name, index=False)
+                    format_sheet(writer, sheet_name, summary)
 
-            st.success("Excel mit Monatsblättern erfolgreich erstellt.")
+            st.success("Excel mit Monatsblättern und Gruppierung erfolgreich erstellt.")
 
             st.download_button(
-                label="📥 Excel-Datei mit Monatsauswertung herunterladen",
+                label="📥 Excel-Datei herunterladen",
                 data=output.getvalue(),
                 file_name="Zulagen_Monatsauswertung.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
