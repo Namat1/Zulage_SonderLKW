@@ -3,7 +3,6 @@ import streamlit as st
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl import Workbook
-import calendar
 
 # Deutsche Monatsnamen
 german_months = ["Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -21,9 +20,9 @@ def define_art(value):
         return "Gliederzug"
     return "Unbekannt"
 
-# ⬇️ Aus Platzgründen hier nicht nochmal das gesamte Dictionary, bitte wiederverwenden:
+# Kürzung: Dictionary hier einfügen
 name_to_personalnummer = {
-    "Adler": {"Philipp": "00041450"},
+   "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
     "Batkowski": {"Tilo": "00046601"},
     "Benabbes": {"Badr": "00048980"},
@@ -105,6 +104,18 @@ name_to_personalnummer = {
     "Zosel": {"Ingo": "00026303"},
 }
 
+def calculate_earnings(row):
+    try:
+        if pd.notnull(row["LKW"]) and "-" in row["LKW"]:
+            nummer = int(row["LKW"].split("-")[1])
+            if nummer in [602, 156]:
+                return 40
+            elif nummer in [620, 350, 520, 266]:
+                return 20
+    except:
+        pass
+    return 0
+
 def apply_styles(sheet):
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
@@ -114,7 +125,6 @@ def apply_styles(sheet):
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
     first_block_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
-
     is_first_in_block = True
 
     for row in sheet.iter_rows(min_col=1, max_col=5, values_only=False):
@@ -129,7 +139,6 @@ def apply_styles(sheet):
                 if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
             is_first_in_block = True
-
         elif is_first_in_block and first_cell_value:
             for cell in row:
                 cell.fill = first_block_fill
@@ -139,7 +148,6 @@ def apply_styles(sheet):
                 if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
             is_first_in_block = False
-
         elif first_cell_value:
             for cell in row:
                 cell.fill = name_fill
@@ -175,16 +183,13 @@ def format_date_with_german_weekday(date):
         "Monday": "Montag", "Tuesday": "Dienstag", "Wednesday": "Mittwoch",
         "Thursday": "Donnerstag", "Friday": "Freitag", "Saturday": "Samstag", "Sunday": "Sonntag"
     }
-    english_weekday = date.strftime("%A")
-    german_weekday = wochentage_mapping.get(english_weekday, english_weekday)
-    original_kw = int(date.strftime("%W"))
-    adjusted_kw = original_kw + 1 if original_kw < 53 else 1
-    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{adjusted_kw})")
+    german_weekday = wochentage_mapping.get(date.strftime("%A"), "")
+    kw = int(date.strftime("%W")) + 1
+    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{kw})")
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     header_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
     name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
-    personalnummer_fill = name_fill
     verdienst_fill = name_fill
     total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
@@ -207,7 +212,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         sheet.cell(row=i, column=start_col, value=name).fill = name_fill
         pn_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer)
         pn_cell.number_format = '00000000'
-        pn_cell.fill = personalnummer_fill
+        pn_cell.fill = name_fill
         total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
         total_cell.number_format = '#,##0.00 €'
         total_cell.fill = verdienst_fill
@@ -219,8 +224,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
     total_row = len(summary_data) + 4
     sheet.cell(row=total_row, column=start_col, value="Gesamtsumme").fill = total_fill
-    total_sum = sum(x[2] for x in summary_data)
-    sheet.cell(row=total_row, column=start_col + 2, value=total_sum).number_format = '#,##0.00 €'
+    sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data)).number_format = '#,##0.00 €'
     for col in range(start_col, start_col + 3):
         cell = sheet.cell(row=total_row, column=col)
         cell.font = Font(bold=True, size=12)
@@ -241,48 +245,23 @@ def main():
             try:
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
                 filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
-
                 if filtered_df.empty:
-                    st.warning(f"Keine passenden Daten in {uploaded_file.name} gefunden.")
+                    st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
                 cols = [0, 3, 4, 10, 11, 12, 14]
                 extracted_data = filtered_df.iloc[:, cols]
                 extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
-
                 extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
                 extracted_data["Art"] = extracted_data["LKW"].apply(
                     lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
                 )
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], errors="coerce")
                 extracted_data["Tour"] = extracted_data["Tour"].fillna(filtered_df.iloc[:, 16])
-
-                # ✅ Neue, robuste Berechnung
-                def calculate_earnings(row):
-                    earnings = 0
-                    values_to_check = []
-
-                    if pd.notnull(row["LKW1"]):
-                        try:
-                            values_to_check.append(int(row["LKW1"]))
-                        except ValueError:
-                            pass
-
-                    if pd.notnull(row["LKW"]) and "-" in row["LKW"]:
-                        try:
-                            values_to_check.append(int(row["LKW"].split("-")[1]))
-                        except ValueError:
-                            pass
-
-                    for value in values_to_check:
-                        if value in [602, 156]:
-                            earnings += 40
-                        elif value in [620, 350, 520, 266]:
-                            earnings += 20
-                    return earnings
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
@@ -293,7 +272,7 @@ def main():
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
 
         if not all_data.empty:
-            output_file = "touren_auswertung_korrekt.xlsx"
+            output_file = "Zulage_Sonderfahrzeuge_2025.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
@@ -330,7 +309,7 @@ def main():
                     st.download_button(
                         label="Download Auswertung",
                         data=file,
-                        file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
+                        file_name=output_file,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
