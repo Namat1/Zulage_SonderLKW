@@ -2,18 +2,27 @@
 import streamlit as st
 import pandas as pd
 import io
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
-st.title("Füngers-Zulagen pro Monat & Fahrer")
+st.title("Füngers-Zulagen Auswertung – Monatsübersicht")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
+# Deutsche Monatsnamen
+german_months = {
+    1: "Januar", 2: "Februar", 3: "März", 4: "April",
+    5: "Mai", 6: "Juni", 7: "Juli", 8: "August",
+    9: "September", 10: "Oktober", 11: "November", 12: "Dezember"
+}
+
 if uploaded_files:
-    alle_eintraege = []
+    eintraege = []
 
     for file in uploaded_files:
         try:
             df = pd.read_excel(file, sheet_name="Touren", header=None)
-            df = df.iloc[4:]  # ab Zeile 5
+            df = df.iloc[4:]
             df.columns = range(df.shape[1])
 
             for _, row in df.iterrows():
@@ -28,39 +37,62 @@ if uploaded_files:
                     and pd.notnull(vorname)
                     and pd.notnull(datum)
                 ):
-                    alle_eintraege.append({
+                    monat = german_months[datum.month] + f" {datum.year}"
+                    eintraege.append({
                         "Nachname": name,
                         "Vorname": vorname,
-                        "Datum": datum.date(),
+                        "Datum": datum.strftime("%d.%m.%Y"),
                         "Kommentar": kommentar,
                         "Verdienst": 20,
-                        "Monat": datum.strftime("%B %Y")
+                        "Monat": monat
                     })
 
         except Exception as e:
-            st.error(f"Fehler beim Verarbeiten der Datei {file.name}: {e}")
+            st.error(f"Fehler in Datei {file.name}: {e}")
 
-    if alle_eintraege:
-        df_gesamt = pd.DataFrame(alle_eintraege)
+    if eintraege:
+        df_gesamt = pd.DataFrame(eintraege)
         st.success(f"{len(df_gesamt)} gültige Füngers-Zulagen erkannt.")
         st.dataframe(df_gesamt)
 
-        # Schreibe pro Monat ein Blatt
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            for monat, monat_df in df_gesamt.groupby("Monat"):
-                sheet_df = []
-                for (nach, vor), gruppe in monat_df.groupby(["Nachname", "Vorname"]):
-                    sheet_df.append([f"{vor} {nach}", "", "", "", ""])
-                    sheet_df.append(["Datum", "Kommentar", "Verdienst", "", ""])
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            for monat, df_monat in df_gesamt.groupby("Monat"):
+                zeilen = []
+                for (nach, vor), gruppe in df_monat.groupby(["Nachname", "Vorname"]):
+                    zeilen.append([f"{vor} {nach}", "", "", "", ""])
+                    zeilen.append(["Datum", "Kommentar", "Verdienst", "", ""])
                     for _, r in gruppe.iterrows():
-                        sheet_df.append([r["Datum"], r["Kommentar"], r["Verdienst"], "", ""])
-                    sheet_df.append(["Gesamt", "", gruppe["Verdienst"].sum(), "", ""])
-                    sheet_df.append([])
+                        zeilen.append([r["Datum"], r["Kommentar"], r["Verdienst"], "", ""])
+                    zeilen.append(["Gesamt", "", gruppe["Verdienst"].sum(), "", ""])
+                    zeilen.append([])
 
-                pd.DataFrame(sheet_df).to_excel(writer, index=False, sheet_name=monat[:31])
+                df_sheet = pd.DataFrame(zeilen)
+                df_sheet.to_excel(writer, index=False, sheet_name=monat[:31])
 
-        st.download_button("Excel mit Monatsblättern herunterladen", output.getvalue(), file_name="füngers_monate.xlsx")
+                # Formatierung
+                sheet = writer.sheets[monat[:31]]
+                thin = Border(left=Side(style='thin'), right=Side(style='thin'),
+                              top=Side(style='thin'), bottom=Side(style='thin'))
+                for row in sheet.iter_rows():
+                    for cell in row:
+                        cell.font = Font(name="Calibri", size=11)
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+                        cell.border = thin
+                        if cell.row == 2:
+                            cell.fill = PatternFill("solid", fgColor="95b3d7")
+                            cell.font = Font(bold=True)
+                        if "Gesamt" in str(cell.value):
+                            cell.font = Font(bold=True)
+                            cell.fill = PatternFill("solid", fgColor="c7b7b3")
+
+                # Spaltenbreiten anpassen
+                for col in sheet.columns:
+                    max_length = max(len(str(cell.value) or "") for cell in col)
+                    col_letter = get_column_letter(col[0].column)
+                    sheet.column_dimensions[col_letter].width = max_length + 2
+
+        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_zulagen_monatsweise.xlsx")
 
     else:
         st.warning("Keine gültigen Füngers-Zulagen gefunden.")
