@@ -382,22 +382,30 @@ def main():
                 # Verdienst berechnen
                 def calculate_earnings(row):
                     earnings = 0
-                    lkw_values = [
-                        row["LKW1"],
-                        row["LKW"].split("-")[1] if pd.notnull(row["LKW"]) and "-" in row["LKW"] else None,
-                        row["Art"]
-                    ]
-                    for value in lkw_values:
+                    nummern = []
+
+                    # LKW1 hinzufügen, wenn numerisch
+                    if pd.notnull(row["LKW1"]):
                         try:
-                            # Konvertiere den Wert in eine Zahl (wenn möglich)
-                            numeric_value = int(value) if isinstance(value, str) and value.isdigit() else value
-                            if numeric_value in [602, 156]:
-                                earnings += 40
-                            elif numeric_value in [620, 350, 520, 266]:
-                                earnings += 20
-                        except (ValueError, TypeError):
-                            continue  # Überspringe ungültige Werte
+                            nummern.append(int(str(row["LKW1"]).strip()))
+                        except:
+                            pass
+
+                    # LKW extrahieren (z. B. aus E-602 → 602)
+                    if pd.notnull(row["LKW"]) and "-" in str(row["LKW"]):
+                        try:
+                            nummern.append(int(row["LKW"].split("-")[1]))
+                        except:
+                            pass
+
+                    for num in nummern:
+                        if num in [602, 156]:
+                            earnings += 40
+                        elif num in [620, 350, 520, 266]:
+                            earnings += 20
+
                     return earnings
+
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
                 extracted_data["Monat"] = extracted_data["Datum"].dt.month
