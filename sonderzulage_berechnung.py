@@ -23,7 +23,7 @@ def define_art(value):
         return "Gigaliner"
     elif value in [350, 620]:
         return "Tandem"
-    elif value == 520:
+    elif value == [520, 266]:
         return "Gliederzug"
     return "Unbekannt"
 
@@ -393,7 +393,7 @@ def main():
                             numeric_value = int(value) if isinstance(value, str) and value.isdigit() else value
                             if numeric_value in [602, 156]:
                                 earnings += 40
-                            elif numeric_value in [620, 350, 520]:
+                            elif numeric_value in [620, 350, 520, 266]:
                                 earnings += 20
                         except (ValueError, TypeError):
                             continue  # Überspringe ungültige Werte
