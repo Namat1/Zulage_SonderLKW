@@ -380,31 +380,19 @@ def main():
                 extracted_data['Tour'] = extracted_data['Tour'].fillna(filtered_df.iloc[:, 16])
 
                 # Verdienst berechnen
-                def calculate_earnings(row):
-                    earnings = 0
-                    nummern = []
+               
+def calculate_earnings(row):
+    try:
+        if pd.notnull(row["LKW"]) and "-" in row["LKW"]:
+            nummer = int(row["LKW"].split("-")[1])
+            if nummer in [266, 520, 620, 350]:
+                return 20
+            elif nummer in [602, 156]:
+                return 40
+    except:
+        pass
+    return 0
 
-                    # LKW1 hinzufügen, wenn numerisch
-                    if pd.notnull(row["LKW1"]):
-                        try:
-                            nummern.append(int(str(row["LKW1"]).strip()))
-                        except:
-                            pass
-
-                    # LKW extrahieren (z. B. aus E-602 → 602)
-                    if pd.notnull(row["LKW"]) and "-" in str(row["LKW"]):
-                        try:
-                            nummern.append(int(row["LKW"].split("-")[1]))
-                        except:
-                            pass
-
-                    for num in nummern:
-                        if num in [602, 156]:
-                            earnings += 40
-                        elif num in [620, 350, 520, 266]:
-                            earnings += 20
-
-                    return earnings
 
 
                 extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
