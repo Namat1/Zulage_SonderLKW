@@ -4,8 +4,9 @@ import pandas as pd
 import io
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+import calendar
 
-st.title("Füngers-Zulagen Auswertung – Einheitliche Darstellung")
+st.title("Füngers-Zulagen Auswertung – mit Kalenderwoche")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
@@ -36,13 +37,15 @@ if uploaded_files:
                     and pd.notnull(vorname)
                     and pd.notnull(datum)
                 ):
+                    kw = datum.isocalendar().week
+                    datum_kw = datum.strftime("%d.%m.%Y") + f" (KW {kw})"
                     monat_index = datum.month
                     jahr = datum.year
                     monat_name = german_months[monat_index]
                     eintraege.append({
                         "Nachname": name,
                         "Vorname": vorname,
-                        "Datum": datum.strftime("%d.%m.%Y"),
+                        "DatumKW": datum_kw,
                         "Kommentar": kommentar,
                         "Verdienst": 20,
                         "Monat": f"{monat_index:02d}-{jahr}_{monat_name} {jahr}"
@@ -62,10 +65,10 @@ if uploaded_files:
                 df_monat = df_gesamt[df_gesamt["Monat"] == monat_key]
                 zeilen = []
                 for (nach, vor), gruppe in df_monat.groupby(["Nachname", "Vorname"]):
-                    zeilen.append([f"{vor} {nach}"])
+                    zeilen.append([f"{vor} {nach}", "", ""])  # Name farblich markieren
                     zeilen.append(["Datum", "Kommentar", "Verdienst"])
                     for _, r in gruppe.iterrows():
-                        zeilen.append([r["Datum"], r["Kommentar"], r["Verdienst"]])
+                        zeilen.append([r["DatumKW"], r["Kommentar"], r["Verdienst"]])
                     zeilen.append(["Gesamt", "", gruppe["Verdienst"].sum()])
 
                 df_sheet = pd.DataFrame(zeilen, columns=["Spalte A", "Spalte B", "Spalte C"])
@@ -94,9 +97,15 @@ if uploaded_files:
                         elif "Gesamt" in first_cell:
                             cell.font = Font(bold=True)
                             cell.fill = total_fill
-                        elif cell.row > 1 and row[1].value is None and row[2].value is None:
-                            cell.font = Font(bold=True, size=12)
-                            cell.fill = hellblau
+                        elif (
+                            cell.col_idx == 1 and row[1].value == "" and row[2].value == ""
+                        ) or (
+                            cell.col_idx == 1 and str(row[0].value).strip() != "" and row[1].value is None and row[2].value is None
+                        ):
+                            # Fahrernamenzeile
+                            for c in row:
+                                c.font = Font(bold=True, size=12)
+                                c.fill = hellblau
 
                 # Spaltenbreite auf 120 % des Inhalts
                 for col_cells in sheet.columns:
@@ -105,7 +114,7 @@ if uploaded_files:
                     adjusted_width = int(max_len * 1.2) + 2
                     sheet.column_dimensions[col_letter].width = adjusted_width
 
-        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final_v4.xlsx")
+        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final_v5.xlsx")
 
     else:
         st.warning("Keine gültigen Füngers-Zulagen gefunden.")
