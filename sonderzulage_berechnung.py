@@ -4,9 +4,8 @@ import pandas as pd
 import io
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-import calendar
 
-st.title("Füngers-Zulagen Auswertung – mit Kalenderwoche")
+st.title("Füngers-Zulagen Auswertung – finale Formatierung")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
@@ -85,27 +84,25 @@ if uploaded_files:
                 total_fill = PatternFill("solid", fgColor="c7b7b3")
 
                 for row in sheet.iter_rows():
-                    first_cell = str(row[0].value or "")
+                    row_is_name = (
+                        row[1].value in [None, ""] and row[2].value in [None, ""]
+                        and isinstance(row[0].value, str)
+                        and row[0].row != 1  # Überschriftenzeile vermeiden
+                    )
                     for cell in row:
                         cell.font = Font(name="Calibri", size=11)
                         cell.alignment = Alignment(horizontal="left", vertical="center")
                         cell.border = thin
 
-                        if cell.row == 2:
+                        if row[0].row == 2:
                             cell.font = Font(bold=True)
                             cell.fill = header_fill
-                        elif "Gesamt" in first_cell:
+                        elif "Gesamt" in str(row[0].value):
                             cell.font = Font(bold=True)
                             cell.fill = total_fill
-                        elif (
-                            cell.col_idx == 1 and row[1].value == "" and row[2].value == ""
-                        ) or (
-                            cell.col_idx == 1 and str(row[0].value).strip() != "" and row[1].value is None and row[2].value is None
-                        ):
-                            # Fahrernamenzeile
-                            for c in row:
-                                c.font = Font(bold=True, size=12)
-                                c.fill = hellblau
+                        elif row_is_name:
+                            cell.font = Font(bold=True, size=12)
+                            cell.fill = hellblau
 
                 # Spaltenbreite auf 120 % des Inhalts
                 for col_cells in sheet.columns:
@@ -114,7 +111,7 @@ if uploaded_files:
                     adjusted_width = int(max_len * 1.2) + 2
                     sheet.column_dimensions[col_letter].width = adjusted_width
 
-        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final_v5.xlsx")
+        st.download_button("Excel-Datei herunterladen", output.getvalue(), file_name="füngers_monatsauswertung_final_v6.xlsx")
 
     else:
         st.warning("Keine gültigen Füngers-Zulagen gefunden.")
