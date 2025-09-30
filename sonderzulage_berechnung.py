@@ -1,23 +1,19 @@
 import pandas as pd
 import streamlit as st
-import calendar
-from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-import calendar
+from datetime import datetime
 
 # Deutsche Monatsnamen
-german_months = [
-    "Dummy",  # Platzhalter für den Index 0
-    "Januar", "Februar", "März", "April", "Mai", "Juni",
+GERMAN_MONTHS = [
+    "Dummy", "Januar", "Februar", "März", "April", "Mai", "Juni",
     "Juli", "August", "September", "Oktober", "November", "Dezember"
 ]
 
-# Funktion für deutschen Monatsnamen
-def get_german_month_name(month_number):
-    return german_months[month_number]
+def get_german_month_name(month_number:int) -> str:
+    return GERMAN_MONTHS[month_number]
 
-# Funktion zur Definition der Spalte "Art" basierend auf Fahrzeugnummern
+# Fahrzeugart
 def define_art(value):
     if value in [602, 156]:
         return "Gigaliner"
@@ -27,9 +23,9 @@ def define_art(value):
         return "Gliederzug"
     return "Unbekannt"
 
-
-
-# Personalnummer-Zuordnung (verkürzt)
+# -------------------------------
+# Personalnummer-Zuordnung
+# -------------------------------
 name_to_personalnummer = {
     "Adler": {"Philipp": "00041450"},
     "Auer": {"Frank": "00020795"},
@@ -115,245 +111,224 @@ name_to_personalnummer = {
     "Zosel": {"Ingo": "00026303"},
 }
 
+# --- Namens-Normalisierung & robuster Lookup ---
+def _norm(s: str) -> str:
+    return (s or "").strip().lower().replace("  ", " ")
+
+def _norm_simple(s: str) -> str:
+    # Bindestriche und Mehrfach-Leerzeichen angleichen
+    return _norm(s).replace("-", " ").replace("  ", " ")
+
+def get_personalnummer(nachname: str, vorname: str) -> str:
+    """Robuste Zuordnung:
+       - trim, casefold
+       - toleriert Bindestriche/Mehrfachvornamen
+       - versucht exakten Treffer, dann Startswith/Substring
+       - fallback: erster Vorname (bis erstes Leerzeichen)
+    """
+    n_key = _norm_simple(nachname)
+    v_key = _norm_simple(vorname)
+
+    # 1) exakter Nachname-Schlüssel (case-insensitive)
+    hit = None
+    for ln, inner in name_to_personalnummer.items():
+        if _norm_simple(ln) == n_key:
+            # a) exakter Vorname
+            for fn, pn in inner.items():
+                if _norm_simple(fn) == v_key:
+                    return pn
+            # b) Vorname beginnt mit/enthält
+            for fn, pn in inner.items():
+                f_norm = _norm_simple(fn)
+                if v_key.startswith(f_norm) or f_norm.startswith(v_key) or (f_norm in v_key) or (v_key in f_norm):
+                    return pn
+            # c) nur erster Vorname probieren
+            if " " in v_key:
+                first = v_key.split(" ", 1)[0]
+                for fn, pn in inner.items():
+                    if _norm_simple(fn).startswith(first):
+                        return pn
+            hit = "Unbekannt"
+            break
+    return hit or "Unbekannt"
+
+# -------------------------------
+# Styling
+# -------------------------------
 def apply_styles(sheet):
-    """
-    Optische Formatierung der Excel-Daten, einschließlich separater Formatierung für die erste Zeile jedes Blocks.
-    """
-    thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
     total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
     data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
-    first_block_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")  # Separates Styling für erste Zeilen
+    first_block_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
 
-    is_first_in_block = True  # Markiert die erste Zeile eines Blocks
+    is_first_in_block = True
 
+    # Format nur für die ersten 5 sichtbaren Daten-Spalten (Detailtabelle)
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        # Gesamtverdienst-Zeilen formatieren
         if "Gesamtverdienst" in first_cell_value:
             for cell in row:
                 cell.fill = total_fill
                 cell.font = Font(bold=True, size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
-            is_first_in_block = True  # Start eines neuen Blocks
+            is_first_in_block = True
 
-        # Erste Zeile jedes Blocks formatieren
         elif is_first_in_block and first_cell_value:
             for cell in row:
-                cell.fill = first_block_fill  # Spezielles Styling für erste Zeile
+                cell.fill = first_block_fill
                 cell.font = Font(bold=True, size=12, italic=True)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
-            is_first_in_block = False  # Nach der ersten Zeile
+            is_first_in_block = False
 
-        # Übrige Namen-Zeilen formatieren
         elif first_cell_value:
             for cell in row:
                 cell.fill = name_fill
                 cell.font = Font(bold=True, size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                if cell.column == 5:  # Euro-Format für Gesamtverdienst
+                if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
-
-        # Datenzeilen formatieren
         else:
             for cell in row:
                 cell.fill = data_fill
                 cell.font = Font(size=11)
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-
-                # Setze das Euro-Zeichen für die Spalte "Verdienst" (Spalte 5)
                 if cell.column == 5:
                     try:
-                        cell.value = float(cell.value)  # Konvertiere den Wert in einen numerischen Typ
+                        cell.value = float(cell.value)
                         cell.number_format = '#,##0.00 €'
                     except (ValueError, TypeError):
-                        pass  # Ignoriere nicht-numerische Werte
-
-            # Markiere die nächste Zeile als potenziell erster Block
+                        pass
             if not first_cell_value:
                 is_first_in_block = True
 
-    # Spaltenbreiten automatisch anpassen
+    # Spaltenbreiten auto
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        sheet.column_dimensions[col_letter].width = max_length + 3
+        sheet.column_dimensions[col_letter].width = min(max_length + 3, 60)
 
-
-
-
- # Erste Zeile ausblenden
+    # Erste Zeile (DataFrame-Header) ausblenden
     sheet.row_dimensions[1].hidden = True
 
-
-def format_date_with_german_weekday(date):
+def format_date_with_german_weekday(date: pd.Timestamp) -> str:
     wochentage_mapping = {
-        "Monday": "Montag",
-        "Tuesday": "Dienstag",
-        "Wednesday": "Mittwoch",
-        "Thursday": "Donnerstag",
-        "Friday": "Freitag",
-        "Saturday": "Samstag",
+        "Monday": "Montag", "Tuesday": "Dienstag", "Wednesday": "Mittwoch",
+        "Thursday": "Donnerstag", "Friday": "Freitag", "Saturday": "Samstag",
         "Sunday": "Sonntag"
     }
-    english_weekday = date.strftime("%A")  # Englischer Wochentag
-    german_weekday = wochentage_mapping.get(english_weekday, english_weekday)  # Übersetzung
-
-    # Original KW berechnen
+    english_weekday = date.strftime("%A")
+    german_weekday = wochentage_mapping.get(english_weekday, english_weekday)
     original_kw = int(date.strftime("%W"))
-    
-    # +1 zur Kalenderwoche
     adjusted_kw = original_kw + 1 if original_kw < 53 else 1
-
     return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{adjusted_kw})")
 
-
-
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
-    """
-    Fügt eine farblich formatierte Zusammenfassung der Daten hinzu.
-    """
-    # Farben für Kopfzeile und Spalten
     header_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
-    name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
-    personalnummer_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
-    verdienst_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
+    cell_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
     total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
-    thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
 
-    # Erste Zelle für den Text "Auszahlung Monat:"
-    auszahlung_label_cell = sheet.cell(row=2, column=start_col, value="Auszahlung Monat:")
-    auszahlung_label_cell.font = Font(bold=True, size=12)
-    auszahlung_label_cell.alignment = Alignment(horizontal="center", vertical="center")
-    auszahlung_label_cell.fill = header_fill
-    auszahlung_label_cell.border = thin_border
+    # Kopf "Auszahlung Monat"
+    c1 = sheet.cell(row=2, column=start_col, value="Auszahlung Monat:")
+    c1.font = Font(bold=True, size=12); c1.alignment = Alignment(horizontal="center", vertical="center")
+    c1.fill = header_fill; c1.border = thin_border
 
-    # Zweite Zelle für den Monatsnamen
-    auszahlung_month_cell = sheet.cell(row=2, column=start_col + 1, value=month_name if month_name else "Unbekannt")
-    auszahlung_month_cell.font = Font(bold=True, size=12)
-    auszahlung_month_cell.alignment = Alignment(horizontal="right", vertical="center")
-    auszahlung_month_cell.fill = header_fill
-    auszahlung_month_cell.border = thin_border
+    c2 = sheet.cell(row=2, column=start_col+1, value=month_name or "Unbekannt")
+    c2.font = Font(bold=True, size=12); c2.alignment = Alignment(horizontal="right", vertical="center")
+    c2.fill = header_fill; c2.border = thin_border
 
-    # Dritte Zelle - Farbliche Formatierung wie die zweite
-    auszahlung_third_cell = sheet.cell(row=2, column=start_col + 2, value="")
-    auszahlung_third_cell.font = Font(bold=True, size=12)
-    auszahlung_third_cell.alignment = Alignment(horizontal="left", vertical="center")
-    auszahlung_third_cell.fill = header_fill
-    auszahlung_third_cell.border = thin_border
+    c3 = sheet.cell(row=2, column=start_col+2, value="")
+    c3.font = Font(bold=True, size=12); c3.alignment = Alignment(horizontal="left", vertical="center")
+    c3.fill = header_fill; c3.border = thin_border
 
-    # Farben für jede Überschrift
-    header_colors = {
-        "Name": "C7B7B3",  # Rot
-        "Personalnummer": "C7B7B3",  # Grün
-        "Gesamtverdienst (€)": "C7B7B3"  # Blau
-    }
-
-    # Zusammenfassungskopfzeilen mit individuellen Farben
-    for idx, header in enumerate(["Name", "Personalnummer", "Gesamtverdienst (€)"], start=start_col):
-        cell = sheet.cell(row=3, column=idx)
-        cell.value = header
+    # Überschriften
+    headers = ["Name", "Personalnummer", "Gesamtverdienst (€)"]
+    for i, h in enumerate(headers, start=start_col):
+        cell = sheet.cell(row=3, column=i, value=h)
         cell.font = Font(bold=True, size=12)
-
-        # Farbe aus dem Dictionary anwenden
-        color = header_colors.get(header, "C7B7B3")  # Standardfarbe Weiß, falls nicht definiert
-        cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-
         cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.fill = total_fill
         cell.border = thin_border
 
+    # Sortierung nach Verdienst
+    summary_data.sort(key=lambda x: x[2], reverse=True)
 
+    # Daten
+    for r, (name, personalnummer, total) in enumerate(summary_data, start=4):
+        # Name
+        nc = sheet.cell(row=r, column=start_col, value=name)
+        nc.font = Font(bold=True, size=12)
+        nc.alignment = Alignment(horizontal="left", vertical="center")
+        nc.fill = cell_fill; nc.border = thin_border
 
-    # Sortiere die Zusammenfassung nach Gesamtverdienst (€)
-    summary_data.sort(key=lambda x: x[2], reverse=True)  # Absteigende Sortierung nach Verdienst
+        # Personalnummer
+        pn_cell = sheet.cell(row=r, column=start_col+1)
+        if personalnummer != "Unbekannt":
+            pn_cell.value = int(personalnummer)  # zeigt mit führenden Nullen per Format
+            pn_cell.number_format = '00000000'
+        else:
+            pn_cell.value = personalnummer
+        pn_cell.font = Font(bold=True, size=12)
+        pn_cell.alignment = Alignment(horizontal="right", vertical="center")
+        pn_cell.fill = cell_fill; pn_cell.border = thin_border
 
-    # Einfügen der Daten mit Farbfüllung
-    for i, (name, personalnummer, total) in enumerate(summary_data, start=4):
-        name_cell = sheet.cell(row=i, column=start_col, value=name)
-        name_cell.font = Font(bold=True, size=12)
-        name_cell.alignment = Alignment(horizontal="left", vertical="center")
-        name_cell.fill = name_fill
-        name_cell.border = thin_border
+        # Verdienst
+        tc = sheet.cell(row=r, column=start_col+2, value=float(total))
+        tc.font = Font(bold=True, size=12)
+        tc.fill = cell_fill; tc.border = thin_border
+        tc.number_format = '#,##0.00 €'
 
-        # Fehlerbehandlung für "Unbekannt" oder nicht-numerische Werte
-        try:
-            personalnummer_value = int(personalnummer)
-        except ValueError:
-            personalnummer_value = personalnummer  # Falls "Unbekannt" oder Text, bleibt es ein String
-
-        personalnummer_cell = sheet.cell(row=i, column=start_col + 1, value=personalnummer_value)
-        personalnummer_cell.number_format = '00000000'  # Format mit führenden Nullen
-        personalnummer_cell.font = Font(bold=True, size=12)
-        personalnummer_cell.alignment = Alignment(horizontal="right", vertical="center")
-        personalnummer_cell.fill = personalnummer_fill
-        personalnummer_cell.border = thin_border
-
-        total_cell = sheet.cell(row=i, column=start_col + 2, value=total)
-        total_cell.font = Font(bold=True, size=12)
-        total_cell.fill = verdienst_fill
-        total_cell.number_format = '#,##0.00 €'
-        total_cell.border = thin_border
-
-
-
-
-    # Gesamtsumme aller Verdienste
+    # Gesamtsumme
     total_row = len(summary_data) + 4
-    for col in range(start_col, start_col + 3):  # Alle drei Spalten formatieren
-        total_sum_cell = sheet.cell(row=total_row, column=col)
-        if col == start_col:  # Erste Spalte: Label "Gesamtsumme"
-            total_sum_cell.value = "Gesamtsumme"
-        elif col == start_col + 2:  # Dritte Spalte: Summe der Verdienste
-            total_sum_cell.value = sum(x[2] for x in summary_data)
-            total_sum_cell.number_format = '#,##0.00 €'
-        total_sum_cell.font = Font(bold=True, size=12)
-        total_sum_cell.fill = total_fill
-        total_sum_cell.border = thin_border
+    lab = sheet.cell(row=total_row, column=start_col, value="Gesamtsumme")
+    lab.font = Font(bold=True, size=12); lab.fill = total_fill; lab.border = thin_border
+    sumcell = sheet.cell(row=total_row, column=start_col+2, value=sum(x[2] for x in summary_data))
+    sumcell.number_format = '#,##0.00 €'
+    sumcell.font = Font(bold=True, size=12); sumcell.fill = total_fill; sumcell.border = thin_border
 
-
-    # Leere Zellen mit Rahmen versehen und vollständiges Raster anwenden
-    max_row = len(summary_data) + 4  # Letzte Zeile der Zusammenfassung
-    for row in range(3, max_row + 1):
-        for col in range(start_col, start_col + 3):  # Spaltenbereich der Zusammenfassung
+    # Raster
+    for row in range(3, total_row + 1):
+        for col in range(start_col, start_col + 3):
             cell = sheet.cell(row=row, column=col)
             if cell.value is None:
-                cell.value = ""  # Füllt leere Zellen mit einem leeren String
-            cell.border = thin_border  # Fügt einen dünnen Rahmen hinzu
+                cell.value = ""
+            cell.border = thin_border
 
-    
-
-
-
+# -------------------------------
+# App
+# -------------------------------
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
-    uploaded_files = st.file_uploader("Lade eine oder mehrere Excel-Dateien hoch", type=["xlsx", "xls"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader(
+        "Lade eine oder mehrere Excel-Dateien hoch",
+        type=["xlsx", "xls"],
+        accept_multiple_files=True
+    )
 
     if uploaded_files:
         all_data = pd.DataFrame()
 
         for uploaded_file in uploaded_files:
             try:
-                # Excel-Datei einlesen
                 df = pd.read_excel(uploaded_file, sheet_name="Touren", header=0)
 
-                # Daten filtern (nur Zeilen mit "AZ" in einer bestimmten Spalte)
-                filtered_df = df[df.iloc[:, 13].str.contains(r'(?i)\b(AZ)\b', na=False)]
+                # AZ-Zeilen filtern (Spalte 14 -> Index 13)
+                mask = df.iloc[:, 13].astype(str).str.contains(r'(?i)\bAZ\b', na=False)
+                filtered_df = df[mask].copy()
+
                 if not filtered_df.empty:
                     filtered_df["Datum"] = pd.to_datetime(filtered_df.iloc[:, 14], format="%d.%m.%Y", errors="coerce")
                     filtered_df = filtered_df[filtered_df["Datum"] >= pd.Timestamp("2025-01-01")]
@@ -362,49 +337,49 @@ def main():
                     st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
-                # Relevante Spalten extrahieren
+                # Relevante Spalten
                 columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-                extracted_data = filtered_df.iloc[:, columns_to_extract]
-                extracted_data.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
+                extracted = filtered_df.iloc[:, columns_to_extract].copy()
+                extracted.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
 
-                # Präfix "E-" vor jede Nummer in der Spalte "LKW" setzen
-                extracted_data["LKW"] = extracted_data["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
+                # Strings trimmen
+                extracted["Nachname"] = extracted["Nachname"].astype(str).str.strip()
+                extracted["Vorname"] = extracted["Vorname"].astype(str).str.strip()
 
-                # Spalte "Art" basierend auf Fahrzeugnummern definieren
-                extracted_data["Art"] = extracted_data["LKW"].apply(
-                    lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in x else "Unbekannt"
+                # LKW normalisieren + Art bestimmen
+                extracted["LKW"] = extracted["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
+                extracted["Art"] = extracted["LKW"].apply(
+                    lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in str(x) and str(x).split("-")[1].isdigit() else "Unbekannt"
                 )
 
-                # Spalte "Datum" in datetime umwandeln
-                extracted_data["Datum"] = pd.to_datetime(extracted_data["Datum"], format="%d.%m.%Y", errors="coerce")
+                extracted["Datum"] = pd.to_datetime(extracted["Datum"], format="%d.%m.%Y", errors="coerce")
 
-                # Falls "Tour" leer ist, nutze Spalte Q (Index 16 in Python)
-                extracted_data['Tour'] = extracted_data['Tour'].fillna(filtered_df.iloc[:, 16])
+                # Tour ggf. aus Spalte Q (Index 16)
+                if "Tour" in extracted.columns and 16 in filtered_df.columns:
+                    extracted["Tour"] = extracted["Tour"].fillna(filtered_df.iloc[:, 16])
 
-                # Verdienst berechnen
+                # Verdienst
                 def calculate_earnings(row):
                     earnings = 0
-                    lkw_values = [
-                        row["LKW1"],
-                        row["LKW"].split("-")[1] if pd.notnull(row["LKW"]) and "-" in row["LKW"] else None,
-                        row["Art"]
-                    ]
-                    for value in lkw_values:
-                        try:
-                            # Konvertiere den Wert in eine Zahl (wenn möglich)
-                            numeric_value = int(value) if isinstance(value, str) and value.isdigit() else value
-                            if numeric_value in [602, 156]:
-                                earnings += 40
-                            elif numeric_value in [620, 350, 520, 266]:
-                                earnings += 20
-                        except (ValueError, TypeError):
-                            continue  # Überspringe ungültige Werte
+                    candidates = []
+                    if pd.notnull(row["LKW1"]) and str(row["LKW1"]).isdigit():
+                        candidates.append(int(row["LKW1"]))
+                    if pd.notnull(row["LKW"]) and "-" in str(row["LKW"]):
+                        tail = str(row["LKW"]).split("-")[1]
+                        if tail.isdigit():
+                            candidates.append(int(tail))
+                    for v in candidates:
+                        if v in [602, 156]:
+                            earnings += 40
+                        elif v in [620, 350, 520, 266]:
+                            earnings += 20
                     return earnings
 
-                extracted_data["Verdienst"] = extracted_data.apply(calculate_earnings, axis=1)
-                extracted_data["Monat"] = extracted_data["Datum"].dt.month
-                extracted_data["Jahr"] = extracted_data["Datum"].dt.year
-                all_data = pd.concat([all_data, extracted_data], ignore_index=True)
+                extracted["Verdienst"] = extracted.apply(calculate_earnings, axis=1)
+                extracted["Monat"] = extracted["Datum"].dt.month
+                extracted["Jahr"] = extracted["Datum"].dt.year
+
+                all_data = pd.concat([all_data, extracted], ignore_index=True)
 
             except Exception as e:
                 st.error(f"Fehler beim Einlesen der Datei {uploaded_file.name}: {e}")
@@ -413,57 +388,62 @@ def main():
             output_file = "touren_auswertung_korrekt.xlsx"
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    sorted_data = all_data.sort_values(by=["Jahr", "Monat"])
+                    sorted_data = all_data.sort_values(by=["Jahr", "Monat", "Nachname", "Vorname"])
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                        month_data = sorted_data[(sorted_data["Monat"] == month) & (sorted_data["Jahr"] == year)]
-                        if not month_data.empty:
-                            sheet_name = f"{get_german_month_name(month)} {year}"  # Deutscher Monatsname
-                            sheet_data = []
-                            summary_data = []
+                        month_data = sorted_data[(sorted_data["Jahr"] == year) & (sorted_data["Monat"] == month)].copy()
+                        if month_data.empty:
+                            continue
 
-                            for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"]):
-                                total_earnings = group["Verdienst"].sum()
-                                personalnummer = name_to_personalnummer.get(nachname, {}).get(vorname, "Unbekannt")
-                                summary_data.append([f"{vorname} {nachname}", personalnummer, total_earnings])
+                        sheet_name = f"{get_german_month_name(month)} {year}"
+                        sheet_data = []
+                        summary_data = []
 
-                                # Gruppendaten zusammenstellen
-                                sheet_data.append([f"{vorname} {nachname}", "", "", "", ""])
-                                sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
-                                for _, row in group.iterrows():
-                                    formatted_date = format_date_with_german_weekday(row["Datum"])
-                                    sheet_data.append([
-                                        formatted_date,
-                                        row["Tour"],
-                                        row["LKW"],
-                                        row["Art"],
-                                        row["Verdienst"]
-                                    ])
+                        # Gruppieren pro Person
+                        for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"], dropna=False):
+                            vn = (vorname or "").strip()
+                            nn = (nachname or "").strip()
 
-                                sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
-                                sheet_data.append([])
+                            total_earnings = float(group["Verdienst"].sum())
+                            personalnummer = get_personalnummer(nn, vn)
 
-                            # Daten in Excel-Tabellenblatt schreiben
-                            sheet_df = pd.DataFrame(sheet_data)
-                            sheet_df.to_excel(writer, index=False, sheet_name=sheet_name[:31])  # Tabellenblatt mit deutschem Namen
-                            sheet = writer.sheets[sheet_name[:31]]
+                            summary_data.append([f"{vn} {nn}".strip(), personalnummer, total_earnings])
 
-                            # Zusammenfassung und Styling anwenden
-                            add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
-                            apply_styles(sheet)
+                            # Block-Kopf
+                            sheet_data.append([f"{vn} {nn}".strip(), "", "", "", ""])
+                            sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
 
-                with open(output_file, "rb") as file:
+                            for _, row in group.iterrows():
+                                dt = pd.to_datetime(row["Datum"]) if pd.notnull(row["Datum"]) else pd.NaT
+                                formatted_date = format_date_with_german_weekday(dt) if pd.notnull(dt) else ""
+                                sheet_data.append([
+                                    formatted_date,
+                                    row["Tour"],
+                                    row["LKW"],
+                                    row["Art"],
+                                    float(row["Verdienst"])
+                                ])
+
+                            sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
+                            sheet_data.append([])
+
+                        # Blatt schreiben
+                        pd.DataFrame(sheet_data).to_excel(writer, index=False, sheet_name=sheet_name[:31])
+                        sheet = writer.sheets[sheet_name[:31]]
+
+                        # Zusammenfassung & Styling
+                        add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
+                        apply_styles(sheet)
+
+                with open(output_file, "rb") as fh:
                     st.download_button(
                         label="Download Auswertung",
-                        data=file,
+                        data=fh,
                         file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
-
-
-
 
 if __name__ == "__main__":
     main()
