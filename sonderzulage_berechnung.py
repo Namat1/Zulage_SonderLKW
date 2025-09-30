@@ -252,11 +252,29 @@ def apply_styles(sheet):
                 is_first_in_block = True
                 alternate_row = False
 
-    # Spaltenbreiten optimieren
-    for col in sheet.columns:
+    # Spaltenbreiten optimieren mit Mindestbreiten
+    column_min_widths = {
+        1: 35,  # Datum (braucht viel Platz für "01.01.2025 (Mittwoch, KW1)")
+        2: 18,  # Tour
+        3: 15,  # LKW
+        4: 15,  # Art
+        5: 18   # Verdienst
+    }
+    
+    for col_idx, col in enumerate(sheet.columns, start=1):
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        adjusted_width = min(max_length + 4, 60)
+        
+        # Berechne Breite mit großzügigerem Puffer
+        calculated_width = max_length + 6
+        
+        # Verwende Mindestbreite falls definiert
+        min_width = column_min_widths.get(col_idx, 12)
+        adjusted_width = max(calculated_width, min_width)
+        
+        # Maximalbreite begrenzen
+        adjusted_width = min(adjusted_width, 65)
+        
         sheet.column_dimensions[col_letter].width = adjusted_width
 
     # Zeilenhöhe für bessere Lesbarkeit
@@ -392,10 +410,10 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     for row in range(2, total_row + 1):
         sheet.row_dimensions[row].height = 22
 
-    # Spaltenbreiten für Summary
-    sheet.column_dimensions[get_column_letter(start_col)].width = 25
-    sheet.column_dimensions[get_column_letter(start_col+1)].width = 18
-    sheet.column_dimensions[get_column_letter(start_col+2)].width = 20
+    # Spaltenbreiten für Summary - großzügiger
+    sheet.column_dimensions[get_column_letter(start_col)].width = 28
+    sheet.column_dimensions[get_column_letter(start_col+1)].width = 20
+    sheet.column_dimensions[get_column_letter(start_col+2)].width = 22
 
 # -------------------------------
 # App (UNVERÄNDERT)
