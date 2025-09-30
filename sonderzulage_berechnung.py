@@ -13,7 +13,7 @@ GERMAN_MONTHS = [
 def get_german_month_name(month_number:int) -> str:
     return GERMAN_MONTHS[month_number]
 
-# Fahrzeugart (Berechnungslogik bleibt unverändert)
+# Fahrzeugart
 def define_art(value):
     if value in [602, 156]:
         return "Gigaliner"
@@ -111,134 +111,114 @@ name_to_personalnummer = {
     "Zosel": {"Ingo": "00026303"},
 }
 
-# --- robuster Namens-Lookup (ohne Einfluss auf die Berechnung) ---
+# --- Namens-Normalisierung & robuster Lookup ---
 def _norm(s: str) -> str:
     return (s or "").strip().lower().replace("  ", " ")
 
 def _norm_simple(s: str) -> str:
+    # Bindestriche und Mehrfach-Leerzeichen angleichen
     return _norm(s).replace("-", " ").replace("  ", " ")
 
 def get_personalnummer(nachname: str, vorname: str) -> str:
+    """Robuste Zuordnung:
+       - trim, casefold
+       - toleriert Bindestriche/Mehrfachvornamen
+       - versucht exakten Treffer, dann Startswith/Substring
+       - fallback: erster Vorname (bis erstes Leerzeichen)
+    """
     n_key = _norm_simple(nachname)
     v_key = _norm_simple(vorname)
 
+    # 1) exakter Nachname-Schlüssel (case-insensitive)
+    hit = None
     for ln, inner in name_to_personalnummer.items():
         if _norm_simple(ln) == n_key:
-            # exakter Vorname
+            # a) exakter Vorname
             for fn, pn in inner.items():
                 if _norm_simple(fn) == v_key:
                     return pn
-            # begins-with/contains
+            # b) Vorname beginnt mit/enthält
             for fn, pn in inner.items():
                 f_norm = _norm_simple(fn)
                 if v_key.startswith(f_norm) or f_norm.startswith(v_key) or (f_norm in v_key) or (v_key in f_norm):
                     return pn
-            # nur erster Vorname probieren
+            # c) nur erster Vorname probieren
             if " " in v_key:
                 first = v_key.split(" ", 1)[0]
                 for fn, pn in inner.items():
                     if _norm_simple(fn).startswith(first):
                         return pn
-            return "Unbekannt"
-    return "Unbekannt"
+            hit = "Unbekannt"
+            break
+    return hit or "Unbekannt"
 
 # -------------------------------
-# Optik / Excel-Styling (nur Ausgabe, Logik bleibt)
+# Styling
 # -------------------------------
 def apply_styles(sheet):
-    thin = Border(left=Side(style="thin"), right=Side(style="thin"),
-                  top=Side(style="thin"), bottom=Side(style="thin"))
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
+    total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
+    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
+    first_block_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
 
-    # Farben
-    c_name      = "95b3d7"  # Kopfzeile je Person (blau)
-    c_head      = "e6e6e6"  # Spaltenüberschrift "Datum/Tour/..."
-    c_row_a     = "ffffff"  # Datenzeile A
-    c_row_b     = "f7f7f7"  # Datenzeile B (Zebra)
-    c_total     = "ddd0cb"  # Gesamtverdienst-Zeile
-    c_summary   = "f2ece8"  # Fallback
+    is_first_in_block = True
 
-    fill_name     = PatternFill("solid", start_color=c_name,    end_color=c_name)
-    fill_head     = PatternFill("solid", start_color=c_head,    end_color=c_head)
-    fill_a        = PatternFill("solid", start_color=c_row_a,   end_color=c_row_a)
-    fill_b        = PatternFill("solid", start_color=c_row_b,   end_color=c_row_b)
-    fill_total    = PatternFill("solid", start_color=c_total,   end_color=c_total)
-    fill_fallback = PatternFill("solid", start_color=c_summary, end_color=c_summary)
+    # Format nur für die ersten 5 sichtbaren Daten-Spalten (Detailtabelle)
+    for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
+        first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-    in_block = False
-    zebra_toggle = False
-
-    # Wir formatieren nur die ersten 5 Spalten (Detailtabelle)
-    for row in sheet.iter_rows(min_col=1, max_col=5):
-        first = (str(row[0].value).strip() if row[0].value is not None else "")
-
-        # 1) Name-Zeile (Blockstart)
-        if first and first not in ("Datum", "Gesamtverdienst"):
-            in_block = True
-            zebra_toggle = False
+        if "Gesamtverdienst" in first_cell_value:
             for cell in row:
-                cell.fill = fill_name
+                cell.fill = total_fill
+                cell.font = Font(bold=True, size=11)
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.border = thin_border
+                if cell.column == 5:
+                    cell.number_format = '#,##0.00 €'
+            is_first_in_block = True
+
+        elif is_first_in_block and first_cell_value:
+            for cell in row:
+                cell.fill = first_block_fill
                 cell.font = Font(bold=True, size=12, italic=True)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = thin
-            row[0].alignment = Alignment(horizontal="left", vertical="center")
-            continue
-
-        # 2) Spaltenüberschriften innerhalb des Blocks
-        if in_block and first == "Datum":
-            for cell in row:
-                cell.fill = fill_head
-                cell.font = Font(bold=True, size=11)
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = thin
-            zebra_toggle = False
-            continue
-
-        # 3) Gesamtverdienst – Blockende
-        if in_block and first == "Gesamtverdienst":
-            for idx, cell in enumerate(row, start=1):
-                cell.fill = fill_total
-                cell.font = Font(bold=True, size=11)
-                cell.alignment = Alignment(horizontal=("left" if idx == 1 else "right"), vertical="center")
-                cell.border = thin
-                if idx == 5:
+                cell.border = thin_border
+                if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
-            in_block = False
-            continue
+            is_first_in_block = False
 
-        # 4) Datenzeilen im Block (Zebra)
-        if in_block:
-            zebra_toggle = not zebra_toggle
-            current_fill = fill_a if zebra_toggle else fill_b
-            for idx, cell in enumerate(row, start=1):
-                cell.fill = current_fill
+        elif first_cell_value:
+            for cell in row:
+                cell.fill = name_fill
+                cell.font = Font(bold=True, size=11)
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.border = thin_border
+                if cell.column == 5:
+                    cell.number_format = '#,##0.00 €'
+        else:
+            for cell in row:
+                cell.fill = data_fill
                 cell.font = Font(size=11)
-                if idx == 1:
-                    cell.alignment = Alignment(horizontal="left", vertical="center")
-                elif idx in (2, 3, 4):
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                else:
-                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.border = thin_border
+                if cell.column == 5:
                     try:
                         cell.value = float(cell.value)
                         cell.number_format = '#,##0.00 €'
-                    except (TypeError, ValueError):
+                    except (ValueError, TypeError):
                         pass
-                cell.border = thin
-            continue
+            if not first_cell_value:
+                is_first_in_block = True
 
-        # 5) Fallback (z. B. leere Zeilen)
-        for cell in row:
-            cell.fill = fill_fallback if first else PatternFill("solid", start_color="FFFFFF", end_color="FFFFFF")
-            cell.font = Font(size=11)
-            cell.alignment = Alignment(horizontal="left", vertical="center")
-            cell.border = thin
+    # Spaltenbreiten auto
+    for col in sheet.columns:
+        max_length = max(len(str(cell.value) or "") for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        sheet.column_dimensions[col_letter].width = min(max_length + 3, 60)
 
-    # Spaltenbreiten (Detailtabelle)
-    widths = {1: 30, 2: 12, 3: 10, 4: 14, 5: 14}
-    for col_idx, width in widths.items():
-        sheet.column_dimensions[get_column_letter(col_idx)].width = width
-
-    # Erste Zeile (DF-Header) ausblenden
+    # Erste Zeile (DataFrame-Header) ausblenden
     sheet.row_dimensions[1].hidden = True
 
 def format_date_with_german_weekday(date: pd.Timestamp) -> str:
@@ -254,109 +234,81 @@ def format_date_with_german_weekday(date: pd.Timestamp) -> str:
     return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{adjusted_kw})")
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
-    header_fill = PatternFill("solid", start_color="95b3d7", end_color="95b3d7")
-    head2_fill  = PatternFill("solid", start_color="c7b7b3", end_color="c7b7b3")
-    row_a_fill  = PatternFill("solid", start_color="ffffff", end_color="ffffff")
-    row_b_fill  = PatternFill("solid", start_color="f7f7f7", end_color="f7f7f7")
-    total_fill  = PatternFill("solid", start_color="ddd0cb", end_color="ddd0cb")
-    thin = Border(left=Side(style="thin"), right=Side(style="thin"),
-                  top=Side(style="thin"), bottom=Side(style="thin"))
+    header_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
+    cell_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
+    total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
 
     # Kopf "Auszahlung Monat"
-    r = 2
-    c1 = sheet.cell(row=r, column=start_col,     value="Auszahlung Monat:")
-    c2 = sheet.cell(row=r, column=start_col + 1, value=month_name or "Unbekannt")
-    c3 = sheet.cell(row=r, column=start_col + 2, value="")
-    for c in (c1, c2, c3):
-        c.font = Font(bold=True, size=12)
-        c.alignment = Alignment(horizontal="center", vertical="center")
-        c.fill = header_fill
-        c.border = thin
-    c2.alignment = Alignment(horizontal="right", vertical="center")
+    c1 = sheet.cell(row=2, column=start_col, value="Auszahlung Monat:")
+    c1.font = Font(bold=True, size=12); c1.alignment = Alignment(horizontal="center", vertical="center")
+    c1.fill = header_fill; c1.border = thin_border
+
+    c2 = sheet.cell(row=2, column=start_col+1, value=month_name or "Unbekannt")
+    c2.font = Font(bold=True, size=12); c2.alignment = Alignment(horizontal="right", vertical="center")
+    c2.fill = header_fill; c2.border = thin_border
+
+    c3 = sheet.cell(row=2, column=start_col+2, value="")
+    c3.font = Font(bold=True, size=12); c3.alignment = Alignment(horizontal="left", vertical="center")
+    c3.fill = header_fill; c3.border = thin_border
 
     # Überschriften
-    r = 3
     headers = ["Name", "Personalnummer", "Gesamtverdienst (€)"]
     for i, h in enumerate(headers, start=start_col):
-        cell = sheet.cell(row=r, column=i, value=h)
+        cell = sheet.cell(row=3, column=i, value=h)
         cell.font = Font(bold=True, size=12)
         cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.fill = head2_fill
-        cell.border = thin
+        cell.fill = total_fill
+        cell.border = thin_border
 
-    # Sortierung (absteigend)
+    # Sortierung nach Verdienst
     summary_data.sort(key=lambda x: x[2], reverse=True)
 
-    # Daten + Zebra
-    zebra = False
-    for idx, (name, personalnummer, total) in enumerate(summary_data, start=4):
-        zebra = not zebra
-        row_fill = row_a_fill if zebra else row_b_fill
-
-        nc = sheet.cell(row=idx, column=start_col, value=name)
-        nc.font = Font(size=12)
+    # Daten
+    for r, (name, personalnummer, total) in enumerate(summary_data, start=4):
+        # Name
+        nc = sheet.cell(row=r, column=start_col, value=name)
+        nc.font = Font(bold=True, size=12)
         nc.alignment = Alignment(horizontal="left", vertical="center")
-        nc.fill = row_fill; nc.border = thin
+        nc.fill = cell_fill; nc.border = thin_border
 
-        pn_cell = sheet.cell(row=idx, column=start_col + 1)
+        # Personalnummer
+        pn_cell = sheet.cell(row=r, column=start_col+1)
         if personalnummer != "Unbekannt":
-            pn_cell.value = int(personalnummer)
-            pn_cell.number_format = "00000000"
+            pn_cell.value = int(personalnummer)  # zeigt mit führenden Nullen per Format
+            pn_cell.number_format = '00000000'
         else:
             pn_cell.value = personalnummer
-        pn_cell.font = Font(size=12)
-        pn_cell.alignment = Alignment(horizontal="center", vertical="center")
-        pn_cell.fill = row_fill; pn_cell.border = thin
+        pn_cell.font = Font(bold=True, size=12)
+        pn_cell.alignment = Alignment(horizontal="right", vertical="center")
+        pn_cell.fill = cell_fill; pn_cell.border = thin_border
 
-        tc = sheet.cell(row=idx, column=start_col + 2, value=float(total))
+        # Verdienst
+        tc = sheet.cell(row=r, column=start_col+2, value=float(total))
+        tc.font = Font(bold=True, size=12)
+        tc.fill = cell_fill; tc.border = thin_border
         tc.number_format = '#,##0.00 €'
-        tc.font = Font(size=12)
-        tc.alignment = Alignment(horizontal="right", vertical="center")
-        tc.fill = row_fill; tc.border = thin
 
     # Gesamtsumme
     total_row = len(summary_data) + 4
     lab = sheet.cell(row=total_row, column=start_col, value="Gesamtsumme")
-    lab.font = Font(bold=True, size=12); lab.fill = total_fill; lab.border = thin
-    lab.alignment = Alignment(horizontal="left", vertical="center")
-
-    sumcell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
+    lab.font = Font(bold=True, size=12); lab.fill = total_fill; lab.border = thin_border
+    sumcell = sheet.cell(row=total_row, column=start_col+2, value=sum(x[2] for x in summary_data))
     sumcell.number_format = '#,##0.00 €'
-    sumcell.font = Font(bold=True, size=12); sumcell.fill = total_fill; sumcell.border = thin
-    sumcell.alignment = Alignment(horizontal="right", vertical="center")
+    sumcell.font = Font(bold=True, size=12); sumcell.fill = total_fill; sumcell.border = thin_border
 
-    # Rahmen
+    # Raster
     for row in range(3, total_row + 1):
         for col in range(start_col, start_col + 3):
             cell = sheet.cell(row=row, column=col)
             if cell.value is None:
                 cell.value = ""
-            cell.border = thin
-
-    # Spaltenbreiten Summary
-    widths = {start_col: 28, start_col + 1: 16, start_col + 2: 18}
-    for col_idx, width in widths.items():
-        sheet.column_dimensions[get_column_letter(col_idx)].width = width
+            cell.border = thin_border
 
 # -------------------------------
 # App
 # -------------------------------
-def format_date_with_german_weekday_wrapper(date):
-    # Wrapper nur für Aufrufklarheit
-    return format_date_with_german_weekday(pd.to_datetime(date))
-
-def format_date_with_german_weekday(date: pd.Timestamp) -> str:
-    wochentage_mapping = {
-        "Monday": "Montag", "Tuesday": "Dienstag", "Wednesday": "Mittwoch",
-        "Thursday": "Donnerstag", "Friday": "Freitag", "Saturday": "Samstag",
-        "Sunday": "Sonntag"
-    }
-    english_weekday = date.strftime("%A")
-    german_weekday = wochentage_mapping.get(english_weekday, english_weekday)
-    original_kw = int(date.strftime("%W"))
-    adjusted_kw = original_kw + 1 if original_kw < 53 else 1
-    return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{adjusted_kw})")
-
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
 
@@ -406,7 +358,7 @@ def main():
                 if "Tour" in extracted.columns and 16 in filtered_df.columns:
                     extracted["Tour"] = extracted["Tour"].fillna(filtered_df.iloc[:, 16])
 
-                # Verdienst (Berechnungslogik bleibt)
+                # Verdienst
                 def calculate_earnings(row):
                     earnings = 0
                     candidates = []
