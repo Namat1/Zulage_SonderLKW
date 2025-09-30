@@ -116,7 +116,6 @@ def _norm(s: str) -> str:
     return (s or "").strip().lower().replace("  ", " ")
 
 def _norm_simple(s: str) -> str:
-    # Bindestriche und Mehrfach-Leerzeichen angleichen
     return _norm(s).replace("-", " ").replace("  ", " ")
 
 def get_personalnummer(nachname: str, vorname: str) -> str:
@@ -153,73 +152,122 @@ def get_personalnummer(nachname: str, vorname: str) -> str:
     return hit or "Unbekannt"
 
 # -------------------------------
-# Styling
+# Styling (VERBESSERT)
 # -------------------------------
 def apply_styles(sheet):
-    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                         top=Side(style='thin'), bottom=Side(style='thin'))
-    total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
-    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-    name_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
-    first_block_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
-
+    """Verbesserte Optik mit modernem Design"""
+    
+    # Moderne Farbpalette
+    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")  # Dunkelblau
+    name_header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")  # Mittelblau
+    subheader_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")  # Hellblau
+    data_fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß
+    data_fill_light = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")  # Sehr helles Grau
+    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")  # Grün für Summen
+    
+    # Rahmen
+    thin_border = Border(
+        left=Side(style='thin', color='CCCCCC'),
+        right=Side(style='thin', color='CCCCCC'),
+        top=Side(style='thin', color='CCCCCC'),
+        bottom=Side(style='thin', color='CCCCCC')
+    )
+    
+    medium_border = Border(
+        left=Side(style='medium', color='1F4E78'),
+        right=Side(style='medium', color='1F4E78'),
+        top=Side(style='medium', color='1F4E78'),
+        bottom=Side(style='medium', color='1F4E78')
+    )
+    
     is_first_in_block = True
+    alternate_row = False
 
-    # Format nur für die ersten 5 sichtbaren Daten-Spalten (Detailtabelle)
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
+        # Gesamtverdienst-Zeile (Summe pro Person)
         if "Gesamtverdienst" in first_cell_value:
             for cell in row:
                 cell.fill = total_fill
-                cell.font = Font(bold=True, size=11)
+                cell.font = Font(bold=True, size=11, color="FFFFFF")
                 cell.alignment = Alignment(horizontal="right", vertical="center")
-                cell.border = thin_border
+                cell.border = medium_border
                 if cell.column == 5:
                     cell.number_format = '#,##0.00 €'
             is_first_in_block = True
+            alternate_row = False
 
+        # Erste Zeile eines neuen Mitarbeiter-Blocks (Name)
         elif is_first_in_block and first_cell_value:
             for cell in row:
-                cell.fill = first_block_fill
-                cell.font = Font(bold=True, size=12, italic=True)
+                cell.fill = name_header_fill
+                cell.font = Font(bold=True, size=13, color="FFFFFF")
                 cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.border = thin_border
-                if cell.column == 5:
-                    cell.number_format = '#,##0.00 €'
+                cell.border = medium_border
             is_first_in_block = False
+            alternate_row = False
 
-        elif first_cell_value:
-            for cell in row:
-                cell.fill = name_fill
-                cell.font = Font(bold=True, size=11)
-                cell.alignment = Alignment(horizontal="right", vertical="center")
-                cell.border = thin_border
-                if cell.column == 5:
-                    cell.number_format = '#,##0.00 €'
+        # Spaltenüberschriften (Datum, Tour, LKW, Art, Verdienst)
+        elif first_cell_value and not any(char.isdigit() for char in first_cell_value[:10]):
+            # Prüfen ob es eine Header-Zeile ist (enthält Worte wie "Datum", "Tour", etc.)
+            if any(keyword in first_cell_value for keyword in ["Datum", "Tour", "LKW", "Art", "Verdienst"]):
+                for cell in row:
+                    cell.fill = subheader_fill
+                    cell.font = Font(bold=True, size=10, color="1F4E78")
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = thin_border
+                alternate_row = False
+            else:
+                # Normale Namenszeile
+                for cell in row:
+                    cell.fill = name_header_fill
+                    cell.font = Font(bold=True, size=11, color="FFFFFF")
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+                    cell.border = thin_border
+
+        # Datenzeilen (alternierende Farben)
         else:
+            fill_color = data_fill_white if alternate_row else data_fill_light
             for cell in row:
-                cell.fill = data_fill
-                cell.font = Font(size=11)
+                cell.fill = fill_color
+                cell.font = Font(size=10, color="2C3E50")
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
+                
+                # Währungsformat für Verdienst-Spalte
                 if cell.column == 5:
                     try:
                         cell.value = float(cell.value)
                         cell.number_format = '#,##0.00 €'
+                        # Grüne Schrift für positive Beträge
+                        if cell.value > 0:
+                            cell.font = Font(size=10, color="70AD47", bold=True)
                     except (ValueError, TypeError):
                         pass
+            
+            alternate_row = not alternate_row
+            
             if not first_cell_value:
                 is_first_in_block = True
+                alternate_row = False
 
-    # Spaltenbreiten auto
+    # Spaltenbreiten optimieren
     for col in sheet.columns:
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        sheet.column_dimensions[col_letter].width = min(max_length + 3, 60)
+        adjusted_width = min(max_length + 4, 60)
+        sheet.column_dimensions[col_letter].width = adjusted_width
 
-    # Erste Zeile (DataFrame-Header) ausblenden
+    # Zeilenhöhe für bessere Lesbarkeit
+    for row in range(1, sheet.max_row + 1):
+        sheet.row_dimensions[row].height = 20
+
+    # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
+    
+    # Freeze Panes für bessere Navigation
+    sheet.freeze_panes = "A3"
 
 def format_date_with_german_weekday(date: pd.Timestamp) -> str:
     wochentage_mapping = {
@@ -234,80 +282,123 @@ def format_date_with_german_weekday(date: pd.Timestamp) -> str:
     return date.strftime(f"%d.%m.%Y ({german_weekday}, KW{adjusted_kw})")
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
-    header_fill = PatternFill(start_color="95b3d7", end_color="95b3d7", fill_type="solid")
-    cell_fill = PatternFill(start_color="F2ECE8", end_color="F2ECE8", fill_type="solid")
-    total_fill = PatternFill(start_color="C7B7B3", end_color="C7B7B3", fill_type="solid")
-    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                         top=Side(style='thin'), bottom=Side(style='thin'))
+    """Verbesserte Zusammenfassungstabelle mit modernem Design"""
+    
+    # Moderne Farbpalette für Summary
+    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")  # Dunkelblau
+    subheader_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")  # Mittelblau
+    cell_fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    cell_fill_light = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
+    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")  # Grün
+    
+    # Rahmen
+    thin_border = Border(
+        left=Side(style='thin', color='CCCCCC'),
+        right=Side(style='thin', color='CCCCCC'),
+        top=Side(style='thin', color='CCCCCC'),
+        bottom=Side(style='thin', color='CCCCCC')
+    )
+    
+    medium_border = Border(
+        left=Side(style='medium', color='1F4E78'),
+        right=Side(style='medium', color='1F4E78'),
+        top=Side(style='medium', color='1F4E78'),
+        bottom=Side(style='medium', color='1F4E78')
+    )
 
-    # Kopf "Auszahlung Monat"
+    # Monatskopf über 3 Spalten
     c1 = sheet.cell(row=2, column=start_col, value="Auszahlung Monat:")
-    c1.font = Font(bold=True, size=12); c1.alignment = Alignment(horizontal="center", vertical="center")
-    c1.fill = header_fill; c1.border = thin_border
+    c1.font = Font(bold=True, size=14, color="FFFFFF")
+    c1.alignment = Alignment(horizontal="right", vertical="center")
+    c1.fill = header_fill
+    c1.border = medium_border
 
     c2 = sheet.cell(row=2, column=start_col+1, value=month_name or "Unbekannt")
-    c2.font = Font(bold=True, size=12); c2.alignment = Alignment(horizontal="right", vertical="center")
-    c2.fill = header_fill; c2.border = thin_border
+    c2.font = Font(bold=True, size=14, color="FFFFFF")
+    c2.alignment = Alignment(horizontal="center", vertical="center")
+    c2.fill = header_fill
+    c2.border = medium_border
 
     c3 = sheet.cell(row=2, column=start_col+2, value="")
-    c3.font = Font(bold=True, size=12); c3.alignment = Alignment(horizontal="left", vertical="center")
-    c3.fill = header_fill; c3.border = thin_border
+    c3.font = Font(bold=True, size=14, color="FFFFFF")
+    c3.alignment = Alignment(horizontal="left", vertical="center")
+    c3.fill = header_fill
+    c3.border = medium_border
 
-    # Überschriften
+    # Spaltenüberschriften
     headers = ["Name", "Personalnummer", "Gesamtverdienst (€)"]
     for i, h in enumerate(headers, start=start_col):
         cell = sheet.cell(row=3, column=i, value=h)
-        cell.font = Font(bold=True, size=12)
+        cell.font = Font(bold=True, size=11, color="FFFFFF")
         cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.fill = total_fill
-        cell.border = thin_border
+        cell.fill = subheader_fill
+        cell.border = medium_border
 
     # Sortierung nach Verdienst
     summary_data.sort(key=lambda x: x[2], reverse=True)
 
-    # Daten
+    # Datenzeilen mit alternierender Farbe
     for r, (name, personalnummer, total) in enumerate(summary_data, start=4):
+        fill_color = cell_fill_white if r % 2 == 0 else cell_fill_light
+        
         # Name
         nc = sheet.cell(row=r, column=start_col, value=name)
-        nc.font = Font(bold=True, size=12)
+        nc.font = Font(bold=True, size=11, color="2C3E50")
         nc.alignment = Alignment(horizontal="left", vertical="center")
-        nc.fill = cell_fill; nc.border = thin_border
+        nc.fill = fill_color
+        nc.border = thin_border
 
         # Personalnummer
         pn_cell = sheet.cell(row=r, column=start_col+1)
         if personalnummer != "Unbekannt":
-            pn_cell.value = int(personalnummer)  # zeigt mit führenden Nullen per Format
+            pn_cell.value = int(personalnummer)
             pn_cell.number_format = '00000000'
         else:
             pn_cell.value = personalnummer
-        pn_cell.font = Font(bold=True, size=12)
-        pn_cell.alignment = Alignment(horizontal="right", vertical="center")
-        pn_cell.fill = cell_fill; pn_cell.border = thin_border
+        pn_cell.font = Font(size=10, color="5A6C7D")
+        pn_cell.alignment = Alignment(horizontal="center", vertical="center")
+        pn_cell.fill = fill_color
+        pn_cell.border = thin_border
 
         # Verdienst
         tc = sheet.cell(row=r, column=start_col+2, value=float(total))
-        tc.font = Font(bold=True, size=12)
-        tc.fill = cell_fill; tc.border = thin_border
+        tc.font = Font(bold=True, size=11, color="70AD47")
+        tc.fill = fill_color
+        tc.border = thin_border
         tc.number_format = '#,##0.00 €'
+        tc.alignment = Alignment(horizontal="right", vertical="center")
 
     # Gesamtsumme
     total_row = len(summary_data) + 4
-    lab = sheet.cell(row=total_row, column=start_col, value="Gesamtsumme")
-    lab.font = Font(bold=True, size=12); lab.fill = total_fill; lab.border = thin_border
+    
+    lab = sheet.cell(row=total_row, column=start_col, value="GESAMTSUMME")
+    lab.font = Font(bold=True, size=12, color="FFFFFF")
+    lab.alignment = Alignment(horizontal="right", vertical="center")
+    lab.fill = total_fill
+    lab.border = medium_border
+    
+    empty_cell = sheet.cell(row=total_row, column=start_col+1, value="")
+    empty_cell.fill = total_fill
+    empty_cell.border = medium_border
+    
     sumcell = sheet.cell(row=total_row, column=start_col+2, value=sum(x[2] for x in summary_data))
     sumcell.number_format = '#,##0.00 €'
-    sumcell.font = Font(bold=True, size=12); sumcell.fill = total_fill; sumcell.border = thin_border
+    sumcell.font = Font(bold=True, size=12, color="FFFFFF")
+    sumcell.fill = total_fill
+    sumcell.border = medium_border
+    sumcell.alignment = Alignment(horizontal="right", vertical="center")
 
-    # Raster
-    for row in range(3, total_row + 1):
-        for col in range(start_col, start_col + 3):
-            cell = sheet.cell(row=row, column=col)
-            if cell.value is None:
-                cell.value = ""
-            cell.border = thin_border
+    # Zeilenhöhe für Summary
+    for row in range(2, total_row + 1):
+        sheet.row_dimensions[row].height = 22
+
+    # Spaltenbreiten für Summary
+    sheet.column_dimensions[get_column_letter(start_col)].width = 25
+    sheet.column_dimensions[get_column_letter(start_col+1)].width = 18
+    sheet.column_dimensions[get_column_letter(start_col+2)].width = 20
 
 # -------------------------------
-# App
+# App (UNVERÄNDERT)
 # -------------------------------
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
