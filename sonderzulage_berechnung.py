@@ -105,6 +105,7 @@ name_to_personalnummer = {
     "Ruge": {"Fabian": "00054705"},
     "Sarwatka": {"Heiko": "00028747"},
     "Swietoslawski": {"Jacek": "00052955"},
+    "Seredynski": {"Ireneusz": "00053452"},
     "Scheil": {"Eric-Rene": "00038579", "Rene": "00020851"},
     "Schlichting": {"Michael": "00021452"},
     "Schlutt": {"Hubert": "00020880", "Rene": "00042932"},
