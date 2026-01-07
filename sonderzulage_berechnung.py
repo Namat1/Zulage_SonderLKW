@@ -130,14 +130,11 @@ def _norm_simple(s: str) -> str:
     s = s.replace("\u00a0", " ")                 # NBSP -> space
     s = unicodedata.normalize("NFKC", s)         # Unicode vereinheitlichen
     s = s.replace("-", " ")                      # Bindestrich -> Space
-
-    # Umlaute vereinheitlichen (ä->ae etc.)
     s = (s.replace("ä", "ae")
            .replace("ö", "oe")
            .replace("ü", "ue")
            .replace("ß", "ss"))
-
-    s = " ".join(s.split())                      # Mehrfachspaces killen
+    s = " ".join(s.split())
     return s
 
 def get_personalnummer(nachname: str, vorname: str) -> str:
@@ -147,24 +144,18 @@ def get_personalnummer(nachname: str, vorname: str) -> str:
     hit = None
     for ln, inner in name_to_personalnummer.items():
         if _norm_simple(ln) == n_key:
-            # a) exakter Vorname
             for fn, pn in inner.items():
                 if _norm_simple(fn) == v_key:
                     return pn
-
-            # b) Vorname beginnt mit/enthält
             for fn, pn in inner.items():
                 f_norm = _norm_simple(fn)
                 if v_key.startswith(f_norm) or f_norm.startswith(v_key) or (f_norm in v_key) or (v_key in f_norm):
                     return pn
-
-            # c) nur erster Vorname probieren
             if " " in v_key:
                 first = v_key.split(" ", 1)[0]
                 for fn, pn in inner.items():
                     if _norm_simple(fn).startswith(first):
                         return pn
-
             hit = "Unbekannt"
             break
 
@@ -187,7 +178,6 @@ def apply_styles(sheet):
         top=Side(style='thin', color='CCCCCC'),
         bottom=Side(style='thin', color='CCCCCC')
     )
-
     medium_border = Border(
         left=Side(style='medium', color='1F4E78'),
         right=Side(style='medium', color='1F4E78'),
@@ -243,7 +233,6 @@ def apply_styles(sheet):
                 cell.font = Font(size=10, color="2C3E50")
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-
                 if cell.column == 5:
                     try:
                         cell.value = float(cell.value)
@@ -254,13 +243,11 @@ def apply_styles(sheet):
                         pass
 
             alternate_row = not alternate_row
-
             if not first_cell_value:
                 is_first_in_block = True
                 alternate_row = False
 
     column_min_widths = {1: 35, 2: 18, 3: 15, 4: 15, 5: 18}
-
     for col_idx, col in enumerate(sheet.columns, start=1):
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
@@ -301,7 +288,6 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         top=Side(style='thin', color='CCCCCC'),
         bottom=Side(style='thin', color='CCCCCC')
     )
-
     medium_border = Border(
         left=Side(style='medium', color='1F4E78'),
         right=Side(style='medium', color='1F4E78'),
@@ -422,10 +408,12 @@ def main():
                     continue
 
                 # ------------------------------------------------------------
-                # NAMEN: D/E ODER (wenn D/E leer) G/H – und wenn beide gefüllt,
-                # beide Personen übernehmen
+                # NAMENLOGIK (wie gewünscht):
+                # - Wenn D und E voll -> D/E verwenden
+                # - Wenn D und E leer -> G/H verwenden
+                # - NICHT beide nehmen
                 # ------------------------------------------------------------
-                # 0=Tour, 3=D Nachname1, 4=E Vorname1, 6=G Nachname2, 7=H Vorname2,
+                # 0=Tour, 3=D Nachname, 4=E Vorname, 6=G Nachname2, 7=H Vorname2,
                 # 10=LKW1, 11=LKW, 12=Art, 14=Datum
                 columns_to_extract = [0, 3, 4, 6, 7, 10, 11, 12, 14]
                 tmp = filtered_df.iloc[:, columns_to_extract].copy()
@@ -442,29 +430,25 @@ def main():
                 rows = []
                 for _, r in tmp.iterrows():
                     de_ok = (r["Nachname_DE"] != "" and r["Vorname_DE"] != "")
-                    gh_ok = (r["Nachname_GH"] != "" and r["Vorname_GH"] != "")
-
-                    pairs = []
                     if de_ok:
-                        pairs.append((r["Nachname_DE"], r["Vorname_DE"]))
+                        nn, vn = r["Nachname_DE"], r["Vorname_DE"]
+                    else:
+                        # nur wenn D/E leer -> G/H
+                        nn, vn = r["Nachname_GH"], r["Vorname_GH"]
 
-                    # Wenn D/E leer, dann G/H als Fallback
-                    if (not de_ok) and gh_ok:
-                        pairs.append((r["Nachname_GH"], r["Vorname_GH"]))
-                    # Wenn beide gefüllt, zweite Person zusätzlich übernehmen
-                    elif de_ok and gh_ok:
-                        pairs.append((r["Nachname_GH"], r["Vorname_GH"]))
+                    # Wenn auch G/H leer ist -> Zeile überspringen
+                    if (nn == "" or vn == ""):
+                        continue
 
-                    for nn, vn in pairs:
-                        rows.append({
-                            "Tour": r["Tour"],
-                            "Nachname": nn,
-                            "Vorname": vn,
-                            "LKW1": r["LKW1"],
-                            "LKW": r["LKW"],
-                            "Art": r["Art"],
-                            "Datum": r["Datum"],
-                        })
+                    rows.append({
+                        "Tour": r["Tour"],
+                        "Nachname": nn,
+                        "Vorname": vn,
+                        "LKW1": r["LKW1"],
+                        "LKW": r["LKW"],
+                        "Art": r["Art"],
+                        "Datum": r["Datum"],
+                    })
 
                 extracted = pd.DataFrame(rows)
 
