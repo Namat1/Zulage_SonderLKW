@@ -10,16 +10,17 @@ GERMAN_MONTHS = [
     "Juli", "August", "September", "Oktober", "November", "Dezember"
 ]
 
-def get_german_month_name(month_number:int) -> str:
+def get_german_month_name(month_number: int) -> str:
     return GERMAN_MONTHS[month_number]
 
 # Fahrzeugart
-def define_art(value):
+def define_art(value: int) -> str:
     if value in [602, 156]:
         return "Gigaliner"
     elif value in [350, 620]:
         return "Tandem"
-    elif value in [520, 266]:
+    # +++ ERWEITERT: zusätzliche Gliederzug-LKW +++
+    elif value in [520, 266, 458, 548, 541, 542, 543, 558]:
         return "Gliederzug"
     return "Unbekannt"
 
@@ -49,7 +50,7 @@ name_to_personalnummer = {
     "Flint": {"Henryk": "00042414"},
     "Fuhlbrügge": {"Justin": "00046289"},
     "Gehrmann": {"Rayk": "00046702"},
-    "Gheonea": {"Costel-Daniel": "00050877"},
+    "Gheonea": {"Costel-Daniel": "00054489"},
     "Glanz": {"Björn": "00041914"},
     "Gnech": {"Torsten": "00018613"},
     "Greve": {"Nicole": "00040760"},
@@ -62,6 +63,8 @@ name_to_personalnummer = {
     "Henkel": {"Bastian": "00048187"},
     "Holtz": {"Torsten": "00021159"},
     "Hirdina": {"Christopher": "00053400"},
+    "Hintz": {"Leif": "00054808"}, 
+    "Hübner": {"Christian": "00054531"}, 
     "Janikiewicz": {"Radoslaw": "00042159"},
     "Kelling": {"Jonas Ole": "00044140"},
     "Kleiber": {"Lutz": "00026255"},
@@ -77,6 +80,7 @@ name_to_personalnummer = {
     "Linke": {"Erich": "00048377"},
     "Lefkih": {"Houssni": "00052293"},
     "Ludolf": {"Michel": "00048814"},
+    "Lämmel": {"Patrick": "00052946"}, 
     "Marouni": {"Ayyoub": "00048986"},
     "Mintel": {"Mario": "00046686"},
     "Ohlenroth": {"Nadja": "00042114"},
@@ -89,10 +93,15 @@ name_to_personalnummer = {
     "Piepke": {"Torsten": "00021390"},
     "Plinke": {"Killian": "00044137"},
     "Pogodski": {"Enrico": "00046668"},
+    "Postu": {"Mihai": "00051391"}, 
     "Quint": {"Stefan": "00035718"},
     "Rimba": {"Rimba Gona": "00046108"},
     "Rheinschmitt": {"Ronald": "00053356"},
+    "Rudert": {"Kevin": "00052858"}, 
+    "Rudolph": {"Yves": "00052855"}, 
+    "Ruge": {"Fabian": "00054705"}, 
     "Sarwatka": {"Heiko": "00028747"},
+    "Swietoslawski": {"Jacek": "00052955"}, 
     "Scheil": {"Eric-Rene": "00038579", "Rene": "00020851"},
     "Schlichting": {"Michael": "00021452"},
     "Schlutt": {"Hubert": "00020880", "Rene": "00042932"},
@@ -105,6 +114,7 @@ name_to_personalnummer = {
     "Tumanow": {"Vasilli": "00045019"},
     "Wachnowski": {"Klaus": "00026019"},
     "Wendel": {"Danilo": "00048994"},
+    "Waschitschek": {"Detlef": "00020436"}, 
     "Wille": {"Rene": "00021393"},
     "Wisniewski": {"Krzysztof": "00046550"},
     "Zander": {"Jan": "00042454"},
@@ -128,7 +138,6 @@ def get_personalnummer(nachname: str, vorname: str) -> str:
     n_key = _norm_simple(nachname)
     v_key = _norm_simple(vorname)
 
-    # 1) exakter Nachname-Schlüssel (case-insensitive)
     hit = None
     for ln, inner in name_to_personalnummer.items():
         if _norm_simple(ln) == n_key:
@@ -156,37 +165,35 @@ def get_personalnummer(nachname: str, vorname: str) -> str:
 # -------------------------------
 def apply_styles(sheet):
     """Verbesserte Optik mit modernem Design"""
-    
-    # Moderne Farbpalette
-    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")  # Dunkelblau
+
+    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")      # Dunkelblau
     name_header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")  # Mittelblau
-    subheader_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")  # Hellblau
+    subheader_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")    # Hellblau
     data_fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß
     data_fill_light = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")  # Sehr helles Grau
-    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")  # Grün für Summen
-    
-    # Rahmen
+    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")        # Grün für Summen
+
     thin_border = Border(
         left=Side(style='thin', color='CCCCCC'),
         right=Side(style='thin', color='CCCCCC'),
         top=Side(style='thin', color='CCCCCC'),
         bottom=Side(style='thin', color='CCCCCC')
     )
-    
+
     medium_border = Border(
         left=Side(style='medium', color='1F4E78'),
         right=Side(style='medium', color='1F4E78'),
         top=Side(style='medium', color='1F4E78'),
         bottom=Side(style='medium', color='1F4E78')
     )
-    
+
     is_first_in_block = True
     alternate_row = False
 
     for row_idx, row in enumerate(sheet.iter_rows(min_col=1, max_col=5), start=1):
         first_cell_value = str(row[0].value).strip() if row[0].value else ""
 
-        # Gesamtverdienst-Zeile (Summe pro Person)
+        # Gesamtverdienst-Zeile
         if "Gesamtverdienst" in first_cell_value:
             for cell in row:
                 cell.fill = total_fill
@@ -208,9 +215,8 @@ def apply_styles(sheet):
             is_first_in_block = False
             alternate_row = False
 
-        # Spaltenüberschriften (Datum, Tour, LKW, Art, Verdienst)
+        # Spaltenüberschriften
         elif first_cell_value and not any(char.isdigit() for char in first_cell_value[:10]):
-            # Prüfen ob es eine Header-Zeile ist (enthält Worte wie "Datum", "Tour", etc.)
             if any(keyword in first_cell_value for keyword in ["Datum", "Tour", "LKW", "Art", "Verdienst"]):
                 for cell in row:
                     cell.fill = subheader_fill
@@ -219,14 +225,13 @@ def apply_styles(sheet):
                     cell.border = thin_border
                 alternate_row = False
             else:
-                # Normale Namenszeile
                 for cell in row:
                     cell.fill = name_header_fill
                     cell.font = Font(bold=True, size=11, color="FFFFFF")
                     cell.alignment = Alignment(horizontal="left", vertical="center")
                     cell.border = thin_border
 
-        # Datenzeilen (alternierende Farben)
+        # Datenzeilen (alternierend)
         else:
             fill_color = data_fill_white if alternate_row else data_fill_light
             for cell in row:
@@ -234,57 +239,51 @@ def apply_styles(sheet):
                 cell.font = Font(size=10, color="2C3E50")
                 cell.alignment = Alignment(horizontal="right", vertical="center")
                 cell.border = thin_border
-                
+
                 # Währungsformat für Verdienst-Spalte
                 if cell.column == 5:
                     try:
                         cell.value = float(cell.value)
                         cell.number_format = '#,##0.00 €'
-                        # Grüne Schrift für positive Beträge
                         if cell.value > 0:
                             cell.font = Font(size=10, color="70AD47", bold=True)
                     except (ValueError, TypeError):
                         pass
-            
+
             alternate_row = not alternate_row
-            
+
             if not first_cell_value:
                 is_first_in_block = True
                 alternate_row = False
 
-    # Spaltenbreiten optimieren mit Mindestbreiten
+    # Spaltenbreiten
     column_min_widths = {
-        1: 35,  # Datum (braucht viel Platz für "01.01.2025 (Mittwoch, KW1)")
+        1: 35,  # Datum
         2: 18,  # Tour
         3: 15,  # LKW
         4: 15,  # Art
         5: 18   # Verdienst
     }
-    
+
     for col_idx, col in enumerate(sheet.columns, start=1):
         max_length = max(len(str(cell.value) or "") for cell in col)
         col_letter = get_column_letter(col[0].column)
-        
-        # Berechne Breite mit großzügigerem Puffer
+
         calculated_width = max_length + 6
-        
-        # Verwende Mindestbreite falls definiert
         min_width = column_min_widths.get(col_idx, 12)
         adjusted_width = max(calculated_width, min_width)
-        
-        # Maximalbreite begrenzen
         adjusted_width = min(adjusted_width, 65)
-        
+
         sheet.column_dimensions[col_letter].width = adjusted_width
 
-    # Zeilenhöhe für bessere Lesbarkeit
+    # Zeilenhöhe
     for row in range(1, sheet.max_row + 1):
         sheet.row_dimensions[row].height = 20
 
     # Erste Zeile ausblenden
     sheet.row_dimensions[1].hidden = True
-    
-    # Freeze Panes für bessere Navigation
+
+    # Freeze Panes
     sheet.freeze_panes = "A3"
 
 def format_date_with_german_weekday(date: pd.Timestamp) -> str:
@@ -301,22 +300,20 @@ def format_date_with_german_weekday(date: pd.Timestamp) -> str:
 
 def add_summary(sheet, summary_data, start_col=9, month_name=""):
     """Verbesserte Zusammenfassungstabelle mit modernem Design"""
-    
-    # Moderne Farbpalette für Summary
-    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")  # Dunkelblau
-    subheader_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")  # Mittelblau
+
+    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+    subheader_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
     cell_fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     cell_fill_light = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
-    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")  # Grün
-    
-    # Rahmen
+    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+
     thin_border = Border(
         left=Side(style='thin', color='CCCCCC'),
         right=Side(style='thin', color='CCCCCC'),
         top=Side(style='thin', color='CCCCCC'),
         bottom=Side(style='thin', color='CCCCCC')
     )
-    
+
     medium_border = Border(
         left=Side(style='medium', color='1F4E78'),
         right=Side(style='medium', color='1F4E78'),
@@ -331,13 +328,13 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     c1.fill = header_fill
     c1.border = medium_border
 
-    c2 = sheet.cell(row=2, column=start_col+1, value=month_name or "Unbekannt")
+    c2 = sheet.cell(row=2, column=start_col + 1, value=month_name or "Unbekannt")
     c2.font = Font(bold=True, size=14, color="FFFFFF")
     c2.alignment = Alignment(horizontal="center", vertical="center")
     c2.fill = header_fill
     c2.border = medium_border
 
-    c3 = sheet.cell(row=2, column=start_col+2, value="")
+    c3 = sheet.cell(row=2, column=start_col + 2, value="")
     c3.font = Font(bold=True, size=14, color="FFFFFF")
     c3.alignment = Alignment(horizontal="left", vertical="center")
     c3.fill = header_fill
@@ -355,19 +352,17 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
     # Sortierung nach Verdienst
     summary_data.sort(key=lambda x: x[2], reverse=True)
 
-    # Datenzeilen mit alternierender Farbe
+    # Datenzeilen
     for r, (name, personalnummer, total) in enumerate(summary_data, start=4):
         fill_color = cell_fill_white if r % 2 == 0 else cell_fill_light
-        
-        # Name
+
         nc = sheet.cell(row=r, column=start_col, value=name)
         nc.font = Font(bold=True, size=11, color="2C3E50")
         nc.alignment = Alignment(horizontal="left", vertical="center")
         nc.fill = fill_color
         nc.border = thin_border
 
-        # Personalnummer
-        pn_cell = sheet.cell(row=r, column=start_col+1)
+        pn_cell = sheet.cell(row=r, column=start_col + 1)
         if personalnummer != "Unbekannt":
             pn_cell.value = int(personalnummer)
             pn_cell.number_format = '00000000'
@@ -378,8 +373,7 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
         pn_cell.fill = fill_color
         pn_cell.border = thin_border
 
-        # Verdienst
-        tc = sheet.cell(row=r, column=start_col+2, value=float(total))
+        tc = sheet.cell(row=r, column=start_col + 2, value=float(total))
         tc.font = Font(bold=True, size=11, color="70AD47")
         tc.fill = fill_color
         tc.border = thin_border
@@ -388,35 +382,35 @@ def add_summary(sheet, summary_data, start_col=9, month_name=""):
 
     # Gesamtsumme
     total_row = len(summary_data) + 4
-    
+
     lab = sheet.cell(row=total_row, column=start_col, value="GESAMTSUMME")
     lab.font = Font(bold=True, size=12, color="FFFFFF")
     lab.alignment = Alignment(horizontal="right", vertical="center")
     lab.fill = total_fill
     lab.border = medium_border
-    
-    empty_cell = sheet.cell(row=total_row, column=start_col+1, value="")
+
+    empty_cell = sheet.cell(row=total_row, column=start_col + 1, value="")
     empty_cell.fill = total_fill
     empty_cell.border = medium_border
-    
-    sumcell = sheet.cell(row=total_row, column=start_col+2, value=sum(x[2] for x in summary_data))
+
+    sumcell = sheet.cell(row=total_row, column=start_col + 2, value=sum(x[2] for x in summary_data))
     sumcell.number_format = '#,##0.00 €'
     sumcell.font = Font(bold=True, size=12, color="FFFFFF")
     sumcell.fill = total_fill
     sumcell.border = medium_border
     sumcell.alignment = Alignment(horizontal="right", vertical="center")
 
-    # Zeilenhöhe für Summary
+    # Zeilenhöhe
     for row in range(2, total_row + 1):
         sheet.row_dimensions[row].height = 22
 
-    # Spaltenbreiten für Summary - großzügiger
+    # Spaltenbreiten Summary
     sheet.column_dimensions[get_column_letter(start_col)].width = 28
-    sheet.column_dimensions[get_column_letter(start_col+1)].width = 20
-    sheet.column_dimensions[get_column_letter(start_col+2)].width = 22
+    sheet.column_dimensions[get_column_letter(start_col + 1)].width = 20
+    sheet.column_dimensions[get_column_letter(start_col + 2)].width = 22
 
 # -------------------------------
-# App (UNVERÄNDERT)
+# App
 # -------------------------------
 def main():
     st.title("Zulage - Sonderfahrzeuge - Ab 2025")
@@ -458,7 +452,9 @@ def main():
                 # LKW normalisieren + Art bestimmen
                 extracted["LKW"] = extracted["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
                 extracted["Art"] = extracted["LKW"].apply(
-                    lambda x: define_art(int(x.split("-")[1])) if pd.notnull(x) and "-" in str(x) and str(x).split("-")[1].isdigit() else "Unbekannt"
+                    lambda x: define_art(int(x.split("-")[1]))
+                    if pd.notnull(x) and "-" in str(x) and str(x).split("-")[1].isdigit()
+                    else "Unbekannt"
                 )
 
                 extracted["Datum"] = pd.to_datetime(extracted["Datum"], format="%d.%m.%Y", errors="coerce")
@@ -471,17 +467,22 @@ def main():
                 def calculate_earnings(row):
                     earnings = 0
                     candidates = []
+
                     if pd.notnull(row["LKW1"]) and str(row["LKW1"]).isdigit():
                         candidates.append(int(row["LKW1"]))
+
                     if pd.notnull(row["LKW"]) and "-" in str(row["LKW"]):
                         tail = str(row["LKW"]).split("-")[1]
                         if tail.isdigit():
                             candidates.append(int(tail))
+
                     for v in candidates:
                         if v in [602, 156]:
                             earnings += 40
-                        elif v in [620, 350, 520, 266]:
+                        # +++ ERWEITERT: zusätzliche 20€-LKW +++
+                        elif v in [620, 350, 520, 266, 458, 548, 541, 542, 543, 558]:
                             earnings += 20
+
                     return earnings
 
                 extracted["Verdienst"] = extracted.apply(calculate_earnings, axis=1)
@@ -500,7 +501,9 @@ def main():
                     sorted_data = all_data.sort_values(by=["Jahr", "Monat", "Nachname", "Vorname"])
 
                     for year, month in sorted_data[["Jahr", "Monat"]].drop_duplicates().values:
-                        month_data = sorted_data[(sorted_data["Jahr"] == year) & (sorted_data["Monat"] == month)].copy()
+                        month_data = sorted_data[
+                            (sorted_data["Jahr"] == year) & (sorted_data["Monat"] == month)
+                        ].copy()
                         if month_data.empty:
                             continue
 
@@ -551,8 +554,11 @@ def main():
                         file_name="Zulage_Sonderfahrzeuge_2025.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
             except Exception as e:
                 st.error(f"Fehler beim Exportieren der Datei: {e}")
+        else:
+            st.info("Keine Daten gefunden (nach AZ-Filter & Datum >= 01.01.2025).")
 
 if __name__ == "__main__":
     main()
