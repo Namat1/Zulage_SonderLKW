@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-from datetime import datetime
 import unicodedata
 
 # Deutsche Monatsnamen
@@ -142,13 +141,6 @@ def _norm_simple(s: str) -> str:
     return s
 
 def get_personalnummer(nachname: str, vorname: str) -> str:
-    """
-    Robuste Zuordnung:
-    - trim, lower, Unicode normalisieren, NBSP entfernen
-    - toleriert Bindestriche/Mehrfachvornamen
-    - versucht exakten Treffer, dann Startswith/Substring
-    - fallback: erster Vorname (bis erstes Leerzeichen)
-    """
     n_key = _norm_simple(nachname)
     v_key = _norm_simple(vorname)
 
@@ -429,19 +421,61 @@ def main():
                     st.warning(f"Keine passenden Daten in der Datei {uploaded_file.name} gefunden.")
                     continue
 
-                # Relevante Spalten
-                columns_to_extract = [0, 3, 4, 10, 11, 12, 14]
-                extracted = filtered_df.iloc[:, columns_to_extract].copy()
-                extracted.columns = ["Tour", "Nachname", "Vorname", "LKW1", "LKW", "Art", "Datum"]
+                # ------------------------------------------------------------
+                # NAMEN: D/E ODER (wenn D/E leer) G/H – und wenn beide gefüllt,
+                # beide Personen übernehmen
+                # ------------------------------------------------------------
+                # 0=Tour, 3=D Nachname1, 4=E Vorname1, 6=G Nachname2, 7=H Vorname2,
+                # 10=LKW1, 11=LKW, 12=Art, 14=Datum
+                columns_to_extract = [0, 3, 4, 6, 7, 10, 11, 12, 14]
+                tmp = filtered_df.iloc[:, columns_to_extract].copy()
+                tmp.columns = ["Tour", "Nachname_DE", "Vorname_DE", "Nachname_GH", "Vorname_GH", "LKW1", "LKW", "Art", "Datum"]
 
-                # Strings trimmen
-                extracted["Nachname"] = extracted["Nachname"].astype(str).str.strip()
-                extracted["Vorname"] = extracted["Vorname"].astype(str).str.strip()
+                def _clean_cell(x) -> str:
+                    if pd.isna(x):
+                        return ""
+                    return str(x).replace("\u00a0", " ").strip()
+
+                for c in ["Nachname_DE", "Vorname_DE", "Nachname_GH", "Vorname_GH"]:
+                    tmp[c] = tmp[c].apply(_clean_cell)
+
+                rows = []
+                for _, r in tmp.iterrows():
+                    de_ok = (r["Nachname_DE"] != "" and r["Vorname_DE"] != "")
+                    gh_ok = (r["Nachname_GH"] != "" and r["Vorname_GH"] != "")
+
+                    pairs = []
+                    if de_ok:
+                        pairs.append((r["Nachname_DE"], r["Vorname_DE"]))
+
+                    # Wenn D/E leer, dann G/H als Fallback
+                    if (not de_ok) and gh_ok:
+                        pairs.append((r["Nachname_GH"], r["Vorname_GH"]))
+                    # Wenn beide gefüllt, zweite Person zusätzlich übernehmen
+                    elif de_ok and gh_ok:
+                        pairs.append((r["Nachname_GH"], r["Vorname_GH"]))
+
+                    for nn, vn in pairs:
+                        rows.append({
+                            "Tour": r["Tour"],
+                            "Nachname": nn,
+                            "Vorname": vn,
+                            "LKW1": r["LKW1"],
+                            "LKW": r["LKW"],
+                            "Art": r["Art"],
+                            "Datum": r["Datum"],
+                        })
+
+                extracted = pd.DataFrame(rows)
+
+                if extracted.empty:
+                    st.warning(f"AZ gefunden, aber keine verwertbaren Namen (D/E oder G/H) in {uploaded_file.name}.")
+                    continue
 
                 # LKW normalisieren + Art bestimmen
                 extracted["LKW"] = extracted["LKW"].apply(lambda x: f"E-{x}" if pd.notnull(x) else x)
                 extracted["Art"] = extracted["LKW"].apply(
-                    lambda x: define_art(int(x.split("-")[1]))
+                    lambda x: define_art(int(str(x).split("-")[1]))
                     if pd.notnull(x) and "-" in str(x) and str(x).split("-")[1].isdigit()
                     else "Unbekannt"
                 )
@@ -449,7 +483,6 @@ def main():
                 extracted["Datum"] = pd.to_datetime(extracted["Datum"], format="%d.%m.%Y", errors="coerce")
 
                 # Tour ggf. aus Spalte Q (Index 16)
-                # Hinweis: funktioniert nur zuverlässig, wenn df Standard-Indexspalten hat.
                 if "Tour" in extracted.columns and filtered_df.shape[1] > 16:
                     extracted["Tour"] = extracted["Tour"].fillna(filtered_df.iloc[:, 16])
 
@@ -500,7 +533,6 @@ def main():
                         sheet_data = []
                         summary_data = []
 
-                        # Gruppieren pro Person
                         for (nachname, vorname), group in month_data.groupby(["Nachname", "Vorname"], dropna=False):
                             vn = (vorname or "").strip()
                             nn = (nachname or "").strip()
@@ -510,7 +542,6 @@ def main():
 
                             summary_data.append([f"{vn} {nn}".strip(), personalnummer, total_earnings])
 
-                            # Block-Kopf
                             sheet_data.append([f"{vn} {nn}".strip(), "", "", "", ""])
                             sheet_data.append(["Datum", "Tour", "LKW", "Art", "Verdienst"])
 
@@ -528,11 +559,9 @@ def main():
                             sheet_data.append(["Gesamtverdienst", "", "", "", total_earnings])
                             sheet_data.append([])
 
-                        # Blatt schreiben
                         pd.DataFrame(sheet_data).to_excel(writer, index=False, sheet_name=sheet_name[:31])
                         sheet = writer.sheets[sheet_name[:31]]
 
-                        # Zusammenfassung & Styling
                         add_summary(sheet, summary_data, start_col=9, month_name=sheet_name)
                         apply_styles(sheet)
 
